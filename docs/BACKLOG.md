@@ -21154,6 +21154,17 @@ fields, matching the offline probe. Receipts are in
   retry a terminal refusal at an unchanged head, and the coverage certificate
   reports the serving run as `unpublished`.
 
+*PHEBS-36 typed-scope reservations by default (2026-11-23):* fixed in code
+(PLAN decision of the same date). Ordinary serve now uses the corrected
+typed-scope reservation policy unless `indexing.typed_scope_reservations` is
+`false`, which restores the historical policy identity as the rollback.
+`experimental.typed_scope_reservations` is deprecated but still loads. The
+first start after upgrading re-extracts every repository once, because the
+policy is part of the generation key.
+- **Remaining.** Sign a release and confirm cadence field references on
+  `dave` with the default config. The upgrade-retry and coverage-certificate
+  observations move to their own ticket.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

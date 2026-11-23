@@ -173,13 +173,12 @@ type Experimental struct {
 	// T11.1 remains STOP/not established and its repo/path lineage is not the
 	// canonical descriptor/module lineage required to complete T12.3.
 	ProvisionalProtoExtraction bool `yaml:"provisional_proto_extraction"`
-	// TypedScopeReservations selects the corrected typed-partition reservation
-	// policy: a typed partition's weight is its validated TypedScope.Records
-	// with a minimum of one instead of the historical zero-record weight-one
-	// sliver. It layers a distinct policy identity onto plans, bindings and the
-	// execution gate, so plans allocated under the historical policy are never
-	// silently reused; off (the default) reconstructs historical identities
-	// byte-exactly. The T47.2 candidate run enables it explicitly.
+	// TypedScopeReservations is the deprecated T47.2d opt-in for the corrected
+	// typed-partition reservation policy. PHEBS-36 promoted that policy to
+	// indexing.typed_scope_reservations (default on), so for ordinary serve
+	// this switch is redundant and true cannot be combined with an explicit
+	// indexing false. The pinned T422 semantic launch still reads it alone, so
+	// its custodied identities reconstruct byte-exactly.
 	TypedScopeReservations bool `yaml:"typed_scope_reservations"`
 	// ProvisionalThriftExtraction enables the T19 Thrift protocol pack
 	// (thrift-contract declarations and thrift-consumer Go evidence). Rule
@@ -215,6 +214,24 @@ type Indexing struct {
 	// Verbose forwards child stdout/stderr and parent phase transitions to the
 	// phebs log. It is disabled by default because large builds can be noisy.
 	Verbose bool `yaml:"verbose"`
+	// TypedScopeReservations selects the corrected T47.2d typed-partition
+	// reservation policy, which weighs a typed partition by its validated
+	// TypedScope.Records (minimum one) instead of the historical weight-one
+	// sliver. PHEBS-36 promotes it: nil (omitted) means on. An explicit false
+	// restores the historical extraction policy identity byte-exactly as the
+	// operator rollback.
+	TypedScopeReservations *bool `yaml:"typed_scope_reservations"`
+}
+
+// TypedScopeReservations reports the effective typed-scope reservation policy
+// for ordinary serve: on unless indexing.typed_scope_reservations is
+// explicitly false. The deprecated experimental.typed_scope_reservations
+// switch can only agree with that default; Validate rejects a contradiction.
+func (c *Config) TypedScopeReservations() bool {
+	if c.Indexing.TypedScopeReservations != nil {
+		return *c.Indexing.TypedScopeReservations
+	}
+	return true
 }
 
 // Diagnostics controls bounded, source-free operational receipts. These
@@ -848,6 +865,13 @@ func (c *Config) validate(lines []int) error {
 		if _, err := scope.Canonical(); err != nil {
 			errs = append(errs, fmt.Errorf("analysis_units[%s]: %v", repo, err))
 		}
+	}
+
+	if c.Experimental.TypedScopeReservations && c.Indexing.TypedScopeReservations != nil &&
+		!*c.Indexing.TypedScopeReservations {
+		errs = append(errs, errors.New(
+			"experimental.typed_scope_reservations: true contradicts indexing.typed_scope_reservations: false; remove the deprecated experimental switch",
+		))
 	}
 
 	serviceCatalogRepos := make([]string, 0, len(c.ServiceCatalogs))

@@ -18777,3 +18777,44 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       fix takes effect at a repository's next commit. PHEBS-36 also records
       this, and a coverage certificate that reports the serving run as
       `unpublished`.
+  - **PHEBS-36, typed-scope reservations by default (2026-11-23).** This
+    supersedes the T47.2d decision (2026-10-10) that kept the corrected
+    typed-scope reservation policy behind
+    `experimental.typed_scope_reservations`. Ordinary serve now uses it by
+    default, under the new `indexing.typed_scope_reservations` setting
+    (default `true`).
+    - **Why.** Under the historical weight-one sliver, a SCIP field partition
+      on a real repository cannot fit its share of the encoded-byte budget:
+      on `dave`, cadence's thriftrw partition refused with 235,071 > 29,127
+      bytes. With the corrected policy, all twelve partitions completed and
+      the exact field references were served (PHEBS-35 verification). The
+      T47.2d measurements on grpc-go and containerd showed the same
+      under-reservation. The signed field packs are on by default since
+      `v0.3.0`, so the default policy has to give them a usable budget.
+    - **What changes.** Only the default. The allocation, the aggregate and
+      per-partition ceilings, the fail-closed sink and the
+      `phebs-extraction-typed-scope-reservations-v1` identity layer are
+      unchanged from T47.2d. Typed partitions are weighed by
+      `max(TypedScope.Records, 1)`, so member partitions can receive a
+      smaller share of the same ceilings; any partition that no longer fits
+      still refuses on its own, with a typed refusal.
+    - **Rollback.** `indexing.typed_scope_reservations: false` restores the
+      historical policy identity byte-exactly. The deprecated experimental
+      switch is still accepted so existing configs load. Ordinary serve
+      ignores its `false`, and config validation refuses its `true` together
+      with an explicit indexing `false`. The pinned T422 semantic launch
+      keeps reading only the experimental switch, so its custodied
+      identities are unchanged.
+    - **Upgrade cost.** The policy digest is part of the extraction
+      generation key, so the first start after upgrading builds a new
+      generation for every repository: a one-time re-extraction. This also
+      retries partitions that refused under the old policy at an unchanged
+      head, which a binary-only upgrade does not do (PHEBS-35 upgrade
+      behaviour). No per-query, sync, retry or publication work is added,
+      and no lock, cache, child process, timer or schema. A typed partition
+      can now stage more of a generation's budget, but every generation stays
+      inside the unchanged aggregate ceilings (49,152 facts, 64 MiB encoded)
+      and per-partition caps, so peak memory and disk bounds are unchanged.
+    - **Not decided here.** A general retry of terminal refusals across
+      binary upgrades, and the coverage certificate that reports a serving
+      run as `unpublished`, stay open as their own ticket.

@@ -652,6 +652,8 @@ func startServeExtractionPipeline(d *serveDeps) error {
 	semanticLaunch := d.semanticLaunch
 	analysisUnits := d.analysisUnits
 
+	typedScopeReservations := serveTypedScopeReservations(cfg, semanticLaunch)
+
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
 	var compatibility compat.Service
@@ -746,7 +748,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		Root: d.partitionPublicationRoot, Store: st,
 		Executor: &extract.EvidencePartitionExecutor{
 			Evidence: st, Extractors: d.exs, StoreAccounting: semanticLaunch != nil,
-			TypedScopeReservations: cfg.Experimental.TypedScopeReservations,
+			TypedScopeReservations: typedScopeReservations,
 			SourceOutcomeRoot:      os.Getenv("PHEBS_T472_SOURCE_OUTCOME_ROOT"),
 		},
 		Publisher:   extractionpublication.StorePublisher{Store: st},
@@ -774,7 +776,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		}
 		extractionPolicy, policyErr := candidate.ExtractionPolicyDigest(
 			candidateState.PolicyDigest, semanticLaunch != nil,
-			cfg.Experimental.TypedScopeReservations,
+			typedScopeReservations,
 		)
 		if policyErr != nil {
 			return false
@@ -834,7 +836,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		CandidateReference:     readPartitionCandidateReference,
 		AuthorityReference:     readPartitionFenceAuthority,
 		StoreAccounting:        semanticLaunch != nil,
-		TypedScopeReservations: cfg.Experimental.TypedScopeReservations,
+		TypedScopeReservations: typedScopeReservations,
 	}
 	openPartitionDomain = partitionReconciler.OpenDomain
 	partitionRuntime.Source = extractionpublication.GitSparseSource{
@@ -850,7 +852,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 			state := publication.State()
 			policy, policyErr := candidate.ExtractionPolicyDigest(
 				state.PolicyDigest, semanticLaunch != nil,
-				cfg.Experimental.TypedScopeReservations,
+				typedScopeReservations,
 			)
 			if policyErr != nil || policy != plan.ExtractionPolicyDigest {
 				return errors.Join(policyErr, extractionpublication.ErrStale)
@@ -1171,4 +1173,16 @@ func startServeIndexPipeline(d *serveDeps) error {
 		runStoreRunner(ctx, d.runBackground, ixRunner)
 	}
 	return nil
+}
+
+// serveTypedScopeReservations selects the extraction reservation policy layer.
+// PHEBS-36: ordinary serve uses the corrected typed-scope reservation policy
+// unless indexing.typed_scope_reservations is explicitly false. The pinned
+// T422 semantic launch keeps its config-custodied identity, which reads only
+// the deprecated experimental switch.
+func serveTypedScopeReservations(cfg *config.Config, semanticLaunch *t422SemanticLaunch) bool {
+	if semanticLaunch != nil {
+		return cfg.Experimental.TypedScopeReservations
+	}
+	return cfg.TypedScopeReservations()
 }
