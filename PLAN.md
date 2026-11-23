@@ -18952,3 +18952,52 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       refuse identically in every generation since 2026-11-22, so the
       certificate now discloses an existing refusal it used to hide.
       PHEBS-37 is closed.
+  - **PHEBS-38, recipe admission refusals keep their cause (2026-11-23).**
+    Since `v0.3.3` every `find_field_references` answer on `dave` reports
+    proof freshness `stale`, because three fixture roots refuse in every
+    generation. Each refusal was persisted as
+    `classification=unknown:dimension=unknown`, so the cause had to be found
+    by re-running the extractor. This answers the MED-513 follow-up to keep
+    partition refusal causes, for the released field recipes' admission
+    checks.
+    - **Causes (re-run on the instance's exact fixture bytes).** Both are
+      correct refusals of synthetic input, not product defects, and no recipe
+      changes:
+      - `t222-realindex` thrift-field: `generated/shared.go` carries no
+        thriftrw generator header (the fixture starts at `package shared`),
+        so the released thriftrw recipe refuses it.
+      - `t225-thrift-field-demo` thrift-field and proto-field: its
+        `index.scip` is written by the T22.5 fixture author, not scip-go
+        0.2.7, so both released recipes refuse it.
+    - **Decision.** `phebs-pipeline-refusal-v1` gains one classification,
+      `unsupported_input`, with two dimensions: `scip_producer` (the index is
+      not scip-go 0.2.7 UTF-8 output) and `generator_provenance` (a generated
+      file's header is not an admitted generator). An extractor marks the
+      cause with `pipelinerefusal.UnsupportedInput`, and the boundary's `At`
+      promotes it, as it already does for a measured limit. The receipt is
+      valid only at `extractor_execution`/`extraction_domain` with zero
+      scalars; anywhere else the cause stays `unknown`. The receipt still
+      names only the admission check, never a path, header or producer.
+    - **Marked sites.** The scip-go 0.2.7 UTF-8 metadata and per-document
+      UTF-8 checks in both field recipes (`scip_producer`), and the generator
+      header checks: Apache Thrift, thriftrw and ambiguous Thrift headers;
+      protobuf generator and source headers and the Open API requirement
+      (`generator_provenance`). Descriptor, symbol-package and field-shape
+      refusals, and a missing repository-root `index.scip`, stay `unknown`;
+      this change does not claim them.
+    - **No implementation revision.** Facts and dispositions are unchanged,
+      so the reader versions and the PHEBS-37 implementation revisions stay
+      as they are. Bumping a revision would re-extract every repository on
+      every instance for a diagnostic. Refusals recorded before the release
+      keep `unknown` until their repository's next head.
+    - **Freshness.** A refused root still makes freshness `stale`, as PHEBS-37
+      decided. On `dave` that stays true while the synthetic fixtures are
+      configured; removing them is an operator choice, not a product change.
+    - **Steady-state cost.** One `errors.As` per partition boundary failure,
+      none on success. The durable reason grows from `unknown:dimension=unknown`
+      to at most `unsupported_input:dimension=generator_provenance`, well
+      under the 256-byte budget. No new read, write, lock, cache, child,
+      timer or schema change.
+    - **Release.** Ships as `v0.3.4`. All twelve pack templates take a patch
+      bump for the rebind. No claim, card, reader version, approval or expiry
+      changes.
