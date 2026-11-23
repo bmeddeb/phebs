@@ -56,9 +56,12 @@ retrieved verbatim). Everything else carries the session's substance.
     runtime admits them with no `release_selection` block;
     `package_default: off` keeps an install dark. The packs were first
     published opt-in in `v0.2.1-experimental.20261020` (2026-10-20).
-    MED-513 installed and verified it on `dave` (2026-11-22). Thrift field
-    references on thriftrw + YARPC repositories await a header-admission fix
-    and a new signed release.
+    MED-513 installed and verified it on `dave` (2026-11-22).
+    [`v0.3.1`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.1)
+    (2026-11-23, `6797ad14`) fixes the thriftrw plugin-header refusal
+    (PHEBS-35), verified on `dave`. Thrift field references on cadence-sized
+    SCIP indexes still need the experimental typed-scope reservation policy
+    (PHEBS-36).
   - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
@@ -18755,3 +18758,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       rebound at signing.
     - **Release:** all twelve templates take a patch bump for `v0.3.1`, per
       the slice 2 rebind policy. No claim, approval or expiry changes.
+    - **Verified (2026-11-23).** `v0.3.1` was published from `6797ad14`
+      (runtime sha256 `ae563fe3…`) and installed on the `dave` instance, with
+      all 11 capabilities lit. At a new `fixture-cadence-scip` head the
+      thriftrw partition no longer refuses at `extractor_execution`. Under the
+      default reservation policy it then refuses at `evidence_staging`
+      (`generation_encoded_bytes` 235,071 > 29,127), because a typed SCIP
+      partition is reserved a weight-one share. With
+      `experimental.typed_scope_reservations: true` all twelve partitions
+      complete, and `find_field_references` serves 17 exact assertions for
+      `replicator.ReplicationTaskInfo#70` and 21 for
+      `replicator.DomainTaskAttributes#20`, matching the offline probe.
+      PHEBS-35 is closed. Promoting the typed-scope policy is a separate
+      decision, tracked as PHEBS-36. This bullet does not make it.
+    - **Upgrade behaviour.** The `v0.3.0` terminal refusal was reused after
+      the upgrade, both on restart and on a forced same-commit reindex,
+      because the extraction generation key does not include the binary. The
+      fix takes effect at a repository's next commit. PHEBS-36 also records
+      this, and a coverage certificate that reports the serving run as
+      `unpublished`.
