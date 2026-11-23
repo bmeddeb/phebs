@@ -64,6 +64,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-23, `d4ee8078`) makes typed-scope reservations the default
     (PHEBS-36). On `dave`, with the default config, it serves cadence's Thrift
     field references.
+    [`v0.3.3`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.3)
+    (2026-11-23, `932d49b1`) re-extracts when an extractor's behaviour
+    changes at an unchanged head, and reports partition-served domains as
+    served coverage (PHEBS-37), verified on `dave`.
   - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
@@ -18932,3 +18936,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     - **Release.** Both PHEBS-37 changes ship as `v0.3.3`. All twelve pack
       templates take a patch bump for the rebind, as in `v0.3.2`. No claim,
       card, reader version, approval or expiry changes.
+    - **Verified (2026-11-23).** `v0.3.3` was published from `932d49b1`
+      (runtime sha256 `ce7f8eed…`) and installed on `dave` with an unchanged
+      default config; all 11 capabilities are lit. At the unchanged
+      `fixture-cadence-scip` head `13e15653`, the first start built a new
+      generation and replaced the field runs (`e2fb6fe8`/`9e2bc4bc` became
+      `8ccb91c6`/`5bdc215a`), and `find_field_references` still serves 17
+      and 21 exact assertions. Across the instance's 9 repositories × 2
+      field domains, the certificate went from 18 `unpublished` to 18
+      `partitioned`, each equal in run, plan and root digest to the exact
+      authority that served it, and the stored bundle now pins all 18 runs
+      (0 before). Proof freshness is `stale`, not `current`: three fixture
+      roots (`t222-realindex` thrift-field, `t225-thrift-field-demo` proto
+      and thrift-field) carry `partition_terminal_refusal`. Those partitions
+      refuse identically in every generation since 2026-11-22, so the
+      certificate now discloses an existing refusal it used to hide.
+      PHEBS-37 is closed.
