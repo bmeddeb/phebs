@@ -18815,6 +18815,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       can now stage more of a generation's budget, but every generation stays
       inside the unchanged aggregate ceilings (49,152 facts, 64 MiB encoded)
       and per-partition caps, so peak memory and disk bounds are unchanged.
+    - **Release.** All twelve pack templates take a patch bump for the
+      rebind, as in `v0.3.1`. No claim, card, reader version, approval or
+      expiry changes.
     - **Not decided here.** A general retry of terminal refusals across
       binary upgrades, and the coverage certificate that reports a serving
       run as `unpublished`, stay open as their own ticket.
