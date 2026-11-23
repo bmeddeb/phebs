@@ -1673,8 +1673,11 @@ its references remain `derived`, `source_binding=none`. thriftrw requires one
 supported1.34.0 header and the existing embedded Raw/SHA1, IDL, generated
 field/wire-ID and SCIP binding; its references remain `exact`,
 `source_binding=module_digest`. A header declares an input property and does
-not prove a generator ran. No managed indexing or declaration-family bridge
-is implied.
+not prove a generator ran. The header must name thriftrw itself. Files
+from thriftrw plugins, such as the `types_yarpc.go` that
+`thriftrw-plugin-yarpc` writes beside each YARPC package, come from another
+generator and are skipped, not refused (since `v0.3.1`). No managed indexing
+or declaration-family bridge is implied.
 
 Both selections share `scip-thrift-field` and one extraction pass. Its reader
 version attests the selected set: `1.4.0-released.apache.1`,

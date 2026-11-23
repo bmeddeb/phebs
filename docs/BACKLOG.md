@@ -21128,6 +21128,16 @@ reports all 11 pack capabilities.
   a repository with protoc-gen-go v1.36.11 output and a committed scip-go
   index.
 
+*PHEBS-35 thriftrw plugin headers (2026-11-23):* fixed in code. The
+thriftrw header check matches `thriftrw` only as the whole generator name, so
+`types_yarpc.go` files from `thriftrw-plugin-yarpc` are skipped rather than
+refusing the partition. A plugin header on a real thriftrw module still
+refuses. The regression test fails on the old matcher with the exact `dave`
+error. Reader versions, claims and artifacts are unchanged. All twelve pack
+templates take a patch bump.
+- **Remaining.** Cut and sign `v0.3.1`, then confirm cadence field
+  references on the `dave` instance.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the
