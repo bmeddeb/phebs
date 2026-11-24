@@ -988,17 +988,12 @@ message Late {}`,
 	}
 }
 
+// An extension group is a file gap since PHEBS-40 (gap_test.go); a parser-level
+// error in an extension body still refuses the whole run.
 func TestExtensionUnsupportedAndMalformedConstructsFailClosed(t *testing.T) {
 	tests := []struct {
 		name, content, want string
 	}{
-		{
-			name: "extension group needs descriptor linking",
-			content: `syntax = "proto2"; package demo;
-message Base { extensions 100 to max; }
-extend Base { optional group Grp = 100 { optional string x = 1; } }`,
-			want: "extension groups require descriptor linking",
-		},
 		{
 			name: "map field in extension body",
 			content: `syntax = "proto2"; package demo;

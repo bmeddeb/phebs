@@ -50,6 +50,38 @@ func (protoDecl) Domain() string                 { return domain }
 func (protoDecl) Version() string                { return version }
 func (protoDecl) Candidate(filePath string) bool { return strings.HasSuffix(filePath, ".proto") }
 
+// ImplementationRevision is 1 since PHEBS-40: an extension group or a
+// conflicting repeated declaration became a file gap instead of a whole-run
+// refusal. Every file the earlier revision accepted yields identical facts;
+// the revision makes refused generations re-extract once at their head.
+func (protoDecl) ImplementationRevision() uint32 { return 1 }
+
+const (
+	// gapPredicate is the file-level explicit gap (PHEBS-40). A gapped file
+	// emits this one unresolved assertion and none of its declarations.
+	gapPredicate = "PROTO_EXTRACTION_GAP"
+	gapRule      = "proto-file-gap-v1"
+	gapSchema    = "proto-gap-detail-v1"
+
+	gapExtensionGroup         = "extension_group"
+	gapDuplicateFieldNumber   = "duplicate_field_number"
+	gapConflictingDeclaration = "conflicting_declaration"
+)
+
+type gapDetail struct {
+	Schema string `json:"schema"`
+	Reason string `json:"reason"`
+}
+
+// extensionGroupGap stops the file walk at an extension group, whose
+// synthetic message and extendee-positioned field need descriptor linking.
+// fileFacts turns it into one extension_group gap cited at the group.
+type extensionGroupGap struct{ node ast.Node }
+
+func (extensionGroupGap) Error() string {
+	return "extension groups require descriptor linking for their synthetic message"
+}
+
 type declarationKind string
 
 const (
@@ -377,7 +409,18 @@ func (protoDecl) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 		if err != nil {
 			return fmt.Errorf("%s: read: %w", relPath, err)
 		}
-		if err := fileFacts(ctx, corpus, relPath, blob, emit); err != nil {
+		// Each gapped file is one distinct unresolved assertion (its subject
+		// is the file), and the worker reconciles this count against them.
+		counted := func(fact sdk.Fact) error {
+			if err := emit(fact); err != nil {
+				return err
+			}
+			if fact.Assertion.Predicate == gapPredicate {
+				coverage.UnresolvedCount++
+			}
+			return nil
+		}
+		if err := fileFacts(ctx, corpus, relPath, blob, counted); err != nil {
 			return fmt.Errorf("%s: %w", relPath, err)
 		}
 		return nil
@@ -417,7 +460,11 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 
 	lineage := lineageID(corpus.RepoName(), relPath)
 	role := roleFor(relPath)
-	emitNode := func(predicate, object, rule, detail string, node ast.Node) error {
+	// The file's facts are held until the whole file is walked: a file that
+	// turns out to be gapped (PHEBS-40) must emit none of its declarations.
+	var pending []sdk.Fact
+	type nodeSpan struct{ startByte, endByte, startLine, endLine int }
+	spanOf := func(object string, node ast.Node) (nodeSpan, error) {
 		info := fileNode.NodeInfo(node)
 		start, raw := info.Start(), info.RawText()
 		// protocompile v0.14.1 documents End as exclusive, but End().Offset
@@ -426,26 +473,56 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 		// byte spans remain correct if that upstream inconsistency is fixed.
 		if start.Offset < 0 || start.Offset >= len(blob.Content) || len(raw) == 0 ||
 			len(raw) > len(blob.Content)-start.Offset || start.Line <= 0 {
-			return fmt.Errorf("invalid parser span for %s", object)
+			return nodeSpan{}, fmt.Errorf("invalid parser span for %s", object)
 		}
 		endByte := start.Offset + len(raw)
 		if blob.Content[start.Offset:endByte] != raw {
-			return fmt.Errorf("parser text does not match source span for %s", object)
+			return nodeSpan{}, fmt.Errorf("parser text does not match source span for %s", object)
 		}
 		endLine := start.Line + strings.Count(raw[:len(raw)-1], "\n")
-		return emit(sdk.Fact{
+		return nodeSpan{start.Offset, endByte, start.Line, endLine}, nil
+	}
+	emitNode := func(predicate, object, rule, detail string, node ast.Node) error {
+		span, err := spanOf(object, node)
+		if err != nil {
+			return err
+		}
+		pending = append(pending, sdk.Fact{
 			Atom: sdk.AtomInput{
 				SchemaVersion: schemaVersion, BlobDigest: blob.Digest,
-				StartByte: start.Offset, EndByte: endByte, RuleID: rule,
+				StartByte: span.startByte, EndByte: span.endByte, RuleID: rule,
 				AdapterConfigDigest: adapterConfigDigest,
 				// Lineage is placement-derived and must not enter content identity:
 				// identical vendored blobs in different repositories share atoms.
 				FactFingerprint: predicate + "|" + object,
 			},
-			Path: relPath, StartLine: start.Line, EndLine: endLine,
+			Path: relPath, StartLine: span.startLine, EndLine: span.endLine,
 			Assertion: sdk.AssertionInput{
 				Predicate: predicate, Subject: relPath, Object: object,
 				Lineage: lineage, Tier: "exact", CodeRole: role, Detail: detail,
+			},
+		})
+		return nil
+	}
+	// emitGap emits the file's single explicit gap (PHEBS-40), cited at the
+	// construct that caused it. It carries no lineage: it asserts nothing
+	// about any declaration identity.
+	emitGap := func(reason string, span nodeSpan) error {
+		detail, err := detailJSON(gapDetail{Schema: gapSchema, Reason: reason})
+		if err != nil {
+			return err
+		}
+		return emit(sdk.Fact{
+			Atom: sdk.AtomInput{
+				SchemaVersion: schemaVersion, BlobDigest: blob.Digest,
+				StartByte: span.startByte, EndByte: span.endByte, RuleID: gapRule,
+				AdapterConfigDigest: adapterConfigDigest,
+				FactFingerprint:     gapPredicate + "|" + reason,
+			},
+			Path: relPath, StartLine: span.startLine, EndLine: span.endLine,
+			Assertion: sdk.AssertionInput{
+				Predicate: gapPredicate, Subject: relPath, Object: reason,
+				Tier: "unresolved", CodeRole: role, Detail: detail,
 			},
 		})
 	}
@@ -525,8 +602,8 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 			case *ast.GroupNode:
 				// An extension group also declares a synthetic nested message
 				// and an extendee-positioned group field; both need descriptor
-				// linking, so the construct refuses rather than guessing.
-				return errors.New("extension groups require descriptor linking for their synthetic message")
+				// linking, so the file becomes a gap rather than guessing.
+				return extensionGroupGap{node: field}
 			}
 		}
 		return nil
@@ -670,62 +747,113 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 		return nil
 	}
 
-	for _, decl := range fileNode.Decls {
-		switch node := decl.(type) {
-		case *ast.ServiceNode:
-			if node.Name == nil {
-				return errors.New("service is missing name")
-			}
-			serviceName := string(node.Name.AsIdentifier())
-			service := joinFullName(pkg, serviceName)
-			if err := emitDeclaration(
-				"DECLARES_SERVICE", service, "proto-service-v3",
-				"proto-service-detail-v1", serviceName, node,
-			); err != nil {
-				return err
-			}
-			for _, element := range node.Decls {
-				if rpc, ok := element.(*ast.RPCNode); ok {
-					if rpc.Name == nil || rpc.Input == nil || rpc.Output == nil ||
-						rpc.Input.MessageType == nil || rpc.Output.MessageType == nil {
-						return errors.New("rpc is missing name, request, or response type")
-					}
-					detail, err := detailJSON(operationDetail{
-						Schema: "proto-operation-detail-v1",
-						Request: resolveTypeReference(
-							string(rpc.Input.MessageType.AsIdentifier()), pkg,
-							declarations, imports, true,
-						),
-						Response: resolveTypeReference(
-							string(rpc.Output.MessageType.AsIdentifier()), pkg,
-							declarations, imports, true,
-						),
-						ClientStreaming: rpc.Input.Stream != nil,
-						ServerStreaming: rpc.Output.Stream != nil,
-					})
-					if err != nil {
-						return err
-					}
-					if err := emitNode(
-						"DECLARES_OPERATION",
-						service+"/"+string(rpc.Name.AsIdentifier()),
-						"proto-rpc-v3", detail, rpc,
-					); err != nil {
-						return err
+	walkFile := func() error {
+		for _, decl := range fileNode.Decls {
+			switch node := decl.(type) {
+			case *ast.ServiceNode:
+				if node.Name == nil {
+					return errors.New("service is missing name")
+				}
+				serviceName := string(node.Name.AsIdentifier())
+				service := joinFullName(pkg, serviceName)
+				if err := emitDeclaration(
+					"DECLARES_SERVICE", service, "proto-service-v3",
+					"proto-service-detail-v1", serviceName, node,
+				); err != nil {
+					return err
+				}
+				for _, element := range node.Decls {
+					if rpc, ok := element.(*ast.RPCNode); ok {
+						if rpc.Name == nil || rpc.Input == nil || rpc.Output == nil ||
+							rpc.Input.MessageType == nil || rpc.Output.MessageType == nil {
+							return errors.New("rpc is missing name, request, or response type")
+						}
+						detail, err := detailJSON(operationDetail{
+							Schema: "proto-operation-detail-v1",
+							Request: resolveTypeReference(
+								string(rpc.Input.MessageType.AsIdentifier()), pkg,
+								declarations, imports, true,
+							),
+							Response: resolveTypeReference(
+								string(rpc.Output.MessageType.AsIdentifier()), pkg,
+								declarations, imports, true,
+							),
+							ClientStreaming: rpc.Input.Stream != nil,
+							ServerStreaming: rpc.Output.Stream != nil,
+						})
+						if err != nil {
+							return err
+						}
+						if err := emitNode(
+							"DECLARES_OPERATION",
+							service+"/"+string(rpc.Name.AsIdentifier()),
+							"proto-rpc-v3", detail, rpc,
+						); err != nil {
+							return err
+						}
 					}
 				}
+			case *ast.MessageNode:
+				if err := walkMessage(pkg, node); err != nil {
+					return err
+				}
+			case *ast.ExtendNode:
+				if err := emitExtension(pkg, node); err != nil {
+					return err
+				}
 			}
-		case *ast.MessageNode:
-			if err := walkMessage(pkg, node); err != nil {
-				return err
-			}
-		case *ast.ExtendNode:
-			if err := emitExtension(pkg, node); err != nil {
-				return err
-			}
+		}
+		return nil
+	}
+	err = walkFile()
+	var group extensionGroupGap
+	if errors.As(err, &group) {
+		span, spanErr := spanOf("extension group", group.node)
+		if spanErr != nil {
+			return spanErr
+		}
+		return emitGap(gapExtensionGroup, span)
+	}
+	if err != nil {
+		return err
+	}
+	if reason, at, conflict := findDeclarationConflict(pending); conflict {
+		return emitGap(reason, nodeSpan{
+			at.Atom.StartByte, at.Atom.EndByte, at.StartLine, at.EndLine,
+		})
+	}
+	for _, fact := range pending {
+		if err := emit(fact); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+// findDeclarationConflict reports the first fact whose identity (predicate
+// and object; subject and lineage are fixed per file) repeats an earlier
+// fact's with a different tier, role or detail. The evidence store refuses
+// such a pair for the whole run, so the file becomes one gap instead
+// (PHEBS-40). Identical repeats are not conflicts: the store merges them.
+// The reference compiler rejects every file this finds.
+func findDeclarationConflict(facts []sdk.Fact) (string, sdk.Fact, bool) {
+	seen := make(map[string]string, len(facts))
+	for _, fact := range facts {
+		a := fact.Assertion
+		key := a.Predicate + "\x00" + a.Object
+		attributes := a.Tier + "\x00" + a.CodeRole + "\x00" + a.Detail
+		if previous, ok := seen[key]; ok {
+			if previous != attributes {
+				if a.Predicate == "DECLARES_FIELD" {
+					return gapDuplicateFieldNumber, fact, true
+				}
+				return gapConflictingDeclaration, fact, true
+			}
+			continue
+		}
+		seen[key] = attributes
+	}
+	return "", sdk.Fact{}, false
 }
 
 func validateProtoComplexity(ctx context.Context, source string) error {
