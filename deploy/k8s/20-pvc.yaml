@@ -1,0 +1,21 @@
+# All phebs state: the SurrealDB database, bare repository mirrors, and
+# search indexes.
+#
+# local-path (node-local disk) instead of a network storage class: phebs runs
+# an embedded database and memory-maps its index files, which behaves better
+# on node-local disk. The trade-off: the data lives on a single node, the Pod
+# is pinned there, and the service is down while that node is down.
+# local-path does not enforce capacity; the number below is a planning value.
+# Adjust storageClassName to whatever your cluster provides.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: phebs-data
+  namespace: phebs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi

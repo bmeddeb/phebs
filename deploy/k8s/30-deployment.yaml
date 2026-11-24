@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phebs
+  namespace: phebs
+  labels:
+    app: phebs
+spec:
+  # The data directory may be owned by exactly one phebs instance at a time;
+  # do not raise the replica count.
+  replicas: 1
+  # The old Pod must fully terminate before the new one starts, or two
+  # instances will fight over the same data directory.
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: phebs
+  template:
+    metadata:
+      labels:
+        app: phebs
+    spec:
+      # On SIGTERM phebs requeues in-flight jobs before exiting.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        # Makes the persistent volume writable by 10001; the recursive
+        # ownership fix only runs when the volume root's group differs, so a
+        # large volume does not stall every start.
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # phebs refuses config files readable by group or other (0600
+        # expected for a named config); ConfigMap volume files are always
+        # root-owned 0644, and after a plain chmod 0600 the runtime user
+        # itself could no longer read them. So copy the file, as the runtime
+        # user, into a private 0600 copy first.
+        # ConfigMap changes only take effect after a Pod restart
+        # (kubectl -n phebs rollout restart deploy/phebs).
+        - name: copy-config
+          image: your-registry.example.com/phebs:0.3.5
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "install -m 0600 /src-phebs/phebs.yaml /etc/phebs/phebs.yaml"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: config
+              mountPath: /src-phebs
+              readOnly: true
+            - name: config-copy
+              mountPath: /etc/phebs
+        # phebs maintains /data/.surreal-runtime.json (recording the SurrealDB
+        # child PID) to keep two instances from sharing one data directory.
+        # The file can survive Pod deletion, and with per-Pod PID namespaces
+        # the stale PID may happen to match a live process in the new Pod, so
+        # phebs misreads "another live server owns the data directory" and
+        # crash-loops. Remove the leftover before the main container starts.
+        # Safety rests on all three of these holding — miss none:
+        #   replicas fixed at 1, update strategy Recreate, PVC is RWO —
+        #   the old Pod is guaranteed to have fully terminated.
+        # If you ever move to multiple replicas or RollingUpdate, remove this
+        # cleanup first.
+        # (The SurrealDB engine's own file lock remains the last line of
+        # defense against concurrent opens; this only removes the rendezvous
+        # file.)
+        - name: clear-stale-runtime
+          image: your-registry.example.com/phebs:0.3.5
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "rm -f /data/.surreal-runtime.json"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: phebs
+          image: your-registry.example.com/phebs:0.3.5
+          # If your registry needs authentication, add imagePullSecrets.
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3070
+          env:
+            # Clone credentials for the http_auth ${GIT_HTTP_*} references in
+            # the ConfigMap. Create them with:
+            #   kubectl -n phebs create secret generic phebs-git-auth \
+            #     --from-literal=username=<user> --from-literal=password=<password-or-token>
+            # The whole block can be dropped when every indexed repository is
+            # publicly reachable.
+            - name: GIT_HTTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: phebs-git-auth
+                  key: username
+            - name: GIT_HTTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: phebs-git-auth
+                  key: password
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              # Indexing is CPU-heavy; size this to your cluster and the
+              # repositories you index.
+              cpu: "2"
+              # Indexing runs in child processes and is memory-hungry. This
+              # is a starting point — adjust to the repositories you index.
+              memory: 4Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config-copy
+              mountPath: /etc/phebs
+              readOnly: true
+          # /api/health needs no authentication. Startup can take a while on
+          # large data (schema checks), hence the 5-minute startup probe.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          # During indexing the CPU is saturated and health checks slow down;
+          # only restart after 2 minutes of consecutive failures.
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: phebs-data
+        - name: config
+          configMap:
+            name: phebs-config
+        - name: config-copy
+          emptyDir: {}
