@@ -20576,7 +20576,7 @@ numbers are the Kite PHEBS tracker items that mirror each lane.
 |---|---|---|
 | Linux mechanisms (T42.H2, MED-494) | Native passes on `dave`: H2r.c.c (MED-495), checkpoint/successor V24 at `0493be25` (MED-496), executor/profile V29, A1 and P5 at `7915f807` (MED-497). Open: pressure/backup/restore composition (MED-498), then prospective plans and source-owned aggregate admission (MED-499). | Focused integration tests and tagged native tests on `dave` that exercise pressure, backup and restore. [Linux handoff #124](https://github.com/bmeddeb/phebs/issues/124) remains open for any of its commands that still apply. |
 | Linux readiness and posture | T42.2v restored launch (MED-500) and T42.2n readiness (MED-501), both reduced to integration-test acceptance. T42.3 posture review (MED-504) follows. T42.2o freeze (MED-502) and separately authorized T42.2 execution (MED-503) are retired. | A restored-launch integration test on the exact head. T42.3 states posture without a scale or SLO claim unless one is measured. |
-| Installed managed SCIP | T45.7 / T45.10 (MED-505). The host-formatting refusal diagnosis (MED-695) is closed. | Admitted compiler/sysroot/offline bundle, then installed generation, navigation, restart and teardown proof on this host. T45.10a presentation stays complete. |
+| Installed managed SCIP | T45.7 / T45.10 (MED-505) closed 2026-11-24: materials rebuilt reproducibly on `dave` and all six neutral native acceptance cases pass. MED-695 is closed. | None for the neutral proof. Frozen public corpus cohorts, arbitrary repositories and scale stay unestablished; T45.10a presentation stays complete. |
 | Managed target qualification | T45.9 (MED-506). | Needs an eligible authorized 5,000-service/12-GB target and host. The T45.6 waiver and the generated-evidence STOP stay unpassed. |
 | Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 were published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). T48.6 ships them on by default in [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) (2026-11-22, `6b4f52da`), signed with `phebs-release-2026-11`. | MED-513 installed and verified v0.3.0 on `dave` (2026-11-22). Atlas, Caller Map, caller comparison, operation impact, Kafka and WIRE all serve, and rollback by revocation and by `package_default: off` both work. [`v0.3.1`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.1) (2026-11-23, `6797ad14`) fixes the thriftrw plugin-header refusal (PHEBS-35), verified on `dave`. [`v0.3.2`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.2) (2026-11-23, `d4ee8078`) makes typed-scope reservations the default (PHEBS-36), and with the default config `dave` serves cadence's Thrift field references. [`v0.3.3`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.3) (2026-11-23, `932d49b1`) re-extracts after a same-version extractor fix and reports partition-served domains as served coverage (PHEBS-37), verified on `dave`. [`v0.3.4`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.4) (2026-11-23, `fb0b1265`) records why a released field recipe refused its input (PHEBS-38), verified on `dave`. [`v0.3.5`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.5) (2026-11-24, `ec712eb1`) gaps a conflicting Thrift file instead of refusing its repository (PHEBS-39), verified on `dave`. [`v0.3.6`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.6) (2026-11-24, `5e77d3e2`) gaps a `.proto` file with an extension group or a conflicting declaration instead of refusing its repository (PHEBS-40), verified on `dave`. `package_default: off` keeps an install dark. The earliest record expiry is 2027-01-10. |
 | Reported limits (tracker only) | MED-487–493 from GitHub issue #163 (now closed). | Needs the affected production instance, repository and generation plus real publication and SCIP diagnostics. |
@@ -21244,6 +21244,17 @@ re-extracted once, `proto-contract` coverage and Contract Atlas counts are
 unchanged, and no gap was emitted, because no repository there holds such a
 file. Receipts are in `~/phebs-instance/receipts/phebs40-2026-11-24/` on
 `dave`.
+
+*MED-505 closed (2026-11-24):* installed managed SCIP passes its tagged
+native acceptance on `dave`. The lost 2026-10-27 material package was rebuilt
+in an LXD KVM guest with Docker 29.1.3, and every tool pin reproduced byte for
+byte. The only exception is the sysroot: its selection was never recorded, so
+it is now produced reproducibly by `spike/t457/med505materials` and re-pinned
+(`429c220d…`). The neutral success, cancel, wall, hard-death, canary and
+dry-run cases all pass under the unchanged measured policy. The success case
+ran in 229.8 s against the 300 s shared wall. See the 2026-11-24 MED-505 ADR in
+`PLAN.md` and `spike/t457/med505_amd64_admission_v3.json`. Receipts are in
+`~/phebs-instance/receipts/med505-2026-11-24/` on `dave`.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 

@@ -1,0 +1,81 @@
+{
+  "schema": "phebs-med505-amd64-material-admission-v3",
+  "recorded_date": "2026-11-24",
+  "status": "installed managed SCIP native acceptance passed: success, cancel, wall, hard-death, canary and dry-run",
+  "supersedes": "med505_amd64_admission_v2.json (its materials existed only on private hosts and were lost; v2 keeps its bytes)",
+  "acceptance_rule": "2026-11-08 integration-test acceptance: gates on the exact head plus the tagged native test; no ceremony",
+  "host": {
+    "machine": "dave",
+    "guest": "LXD KVM VM med505: Ubuntu 24.04.5, kernel 6.8.0-147-generic, 4 vCPU, 8 GiB, cgroup v2",
+    "docker": "29.1.3, systemd cgroup driver, AppArmor and seccomp, API 1.47 supported",
+    "host_sudo_used": false
+  },
+  "go_sdk": {
+    "url": "https://go.dev/dl/go1.25.7.linux-amd64.tar.gz",
+    "archive_sha256": "12e6d6a191091ae27dc31f6efc630e3a3b8ba409baf3573d955b196fdf086005",
+    "go_sha256": "76ac600b41ad2eceee5d39d02af78009516f8b2a29f30bcc80f765c3e4b4f5a8",
+    "reproduced": true
+  },
+  "sysroot": {
+    "sha256": "429c220debedc299b88279c94fd54b7c70fcf0c848900ddb36876af04a4e8d3a",
+    "archive_bytes": 170197504,
+    "regular_entries": 2311,
+    "compiler": "GCC 13.3.0-6ubuntu2~24.04.1, glibc 2.39-0ubuntu8.12, binutils 2.42-4ubuntu2.10",
+    "producer": "spike/t457/med505materials (Dockerfile.compiler, select-sysroot.sh, sysrootzip)",
+    "serialization_reproduced": true,
+    "bare_container_c_and_cgo_probe": "pass",
+    "reproduces_v2_std_archives": "344 of 344 byte-identical"
+  },
+  "runtime_image": {
+    "local_id": "sha256:baa6af59883c82fcae290a22a26159e5ca5be3f5defca7bd663dfed3e982dc5f",
+    "base": "ubuntu:24.04@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b",
+    "apt_snapshot": "20261124T000000Z",
+    "environment_keys": ["PATH"],
+    "volumes": []
+  },
+  "reproduced_unchanged_pins": {
+    "bazel": "c44a93f25398c68f904fa1d19b61d321de6c0d2f09dca375d7bc0dc9b9428403",
+    "rules_go_archive": "68af54cb97fbdee5e5e8fe8d210d15a518f9d62abfd71620c3eaff3b26a5ff86",
+    "bcr_rules_go_module": "b7e43e7414a3139a7547d1b4909b29085fbe5182b6c58cbe1ed4c6272815aeae",
+    "bcr_rules_go_source": "1df17bb7865cfc029492c30163cee891d0dd8658ea0d5bfdf252c4b6db5c1ef6",
+    "bcr_rules_go_patch": "f0ea14c601a983d77cd58e400d38ce4188af94e948b2bd8c37a633b913487030",
+    "scip_go": "31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4",
+    "gopackagesdriver": "2b58a9c9a294fc8d9c899bd66f881f7236ed4422a998a4cebab07662ec373bb8",
+    "phebs_pack": "b9a2b8c53589745883c8c9dbf26a3546ee1ee05969146fd012cccaa89e5061a3",
+    "phebs_rules_go_builder": "b59577e0095185f9d7646d081d2c782712a1d0da89b72b83c3f120f600f7c993",
+    "sdk_std_archive_manifest": "46a6a81dc515cdc997e535e7d5d48ca2d43ae0ceb048de1da53aa25ed2d35040"
+  },
+  "neutral_workspace": {
+    "path": "spike/t457/med505materials/neutral",
+    "module_deps": ["rules_go 0.59.0", "protobuf 33.4"],
+    "protobuf_reason": "the planner and launcher pass --@protobuf//bazel/toolchains:prefer_prebuilt_protoc, so the root module must see @protobuf",
+    "repository_cache": "content_addressable entries only; Bazel's extracted contents cache is excluded"
+  },
+  "preparation": {
+    "id": "med505-p6",
+    "native_host_seconds": 45.6,
+    "postrun": "pass",
+    "bundle_files": 22700,
+    "final_inventory_sha256": "099f8383b5559e0f2d0f93e3cfb252943edd5881c704d2fb4a0555280437a681",
+    "final_profile_sha256": "1b43fc91d10044195162fefda24f8123be33bec2dd1687a6fedf70a0b6121f05",
+    "final_bytes_rebuilt_by": "spike/t457/med505materials/bundlegen -final (reproduces the post-run selection, universe, inventory and profile digests)"
+  },
+  "acceptance": {
+    "id": "med505-a2",
+    "source": "abb4bc78 internal packages (later commits change only spike/t457 and docs)",
+    "test_sha256": "6acbac6260533d235f96393bf37d7a59ae1daf3a56d88909ecc71e06933d07b0",
+    "helper_sha256": "a8f0c2e133bea4e2914783cae66635b63360a7c0897540a533d4b1721644d143",
+    "engine": "SurrealDB 3.2.0 9d631086ebc74fbfd3914b1acdbad0fa8b1655d02acc93f9208455038ee394c1",
+    "policy": "MeasuredPolicy unchanged: 2 CPUs, 4,533,092,352 B memory, 294 tasks, 128 descriptors, 300 s shared wall",
+    "cases": [
+      {"case": "success", "pass": true, "seconds": 229.8},
+      {"case": "cancel", "pass": true, "seconds": 144.7},
+      {"case": "wall", "pass": true, "seconds": 377.2},
+      {"case": "hard-death", "pass": true, "seconds": 169.7},
+      {"case": "canary", "pass": true, "seconds": 211.4},
+      {"case": "dry-run", "pass": true, "seconds": 208.5}
+    ],
+    "after_all_cases": "0 containers, empty scratch namespace (.lock only), 0 loop devices"
+  },
+  "not_established": ["frozen public corpus cohorts", "arbitrary repositories", "scale", "rendered UI", "release"]
+}

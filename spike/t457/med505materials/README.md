@@ -42,3 +42,36 @@ Checks:
   amd64 `cc` wrapper over the unpacked ZIP compiles, links and runs a C program and a cgo
   Go program.
 - The 344 std archives built through that wrapper are byte-identical to the admitted set.
+
+## Bundle, preparation and native acceptance
+
+These steps run as root inside the guest. The scripts in `operator/` are the exact ones
+used, and they assume the guest work tree at `/srv/med505`.
+
+1. **Neutral workspace.** `neutral/` holds `MODULE.bazel`, `MODULE.bazel.lock`, `go.mod`
+   and `lib/`. It needs `bazel_dep(protobuf, 33.4)` because the planner and launcher pass
+   `--@protobuf//bazel/toolchains:prefer_prebuilt_protoc`. The repository cache is one
+   online `bazel fetch //lib:lib` with that flag, keeping only `content_addressable/`.
+2. **Scratch base.** Provision `/var/lib/phebs-typed-index` (mode 0700) with an empty
+   `.lock` (mode 0600).
+3. **Fresh store.** `fresh-store.sh` starts a pristine in-memory SurrealDB 3.2.0 for the
+   seed.
+4. **Stage and run preparation.** `prepare.sh <id> <cache>` assembles the bundle:
+   - the preparation test binary is the in-bundle worker;
+   - there is no `typed-host-tools.json`;
+   - modes are not group- or world-writable, and there are no hard links.
+   It then runs `bundlegen`, commits the neutral source to get a real commit ID, observes
+   `deployment.json`, seeds the store and stages `/var/lib/phebs-typed-preparation/<id>`.
+   `run-prep.sh <id>` runs `TestNativePreparationHost`.
+5. **Post-run.** `postrun.sh <id>` runs `TestNativePreparationPostRun` with the final
+   `cmd/phebs` helper. It writes `seed.surql` and `postrun.json`.
+6. **Stage acceptance.** `stage-acceptance.sh <acceptance-id> <id>` runs
+   `bundlegen -final` to rebuild the selection, final inventory and profile; the outputs
+   must reproduce `postrun.json`'s digests. It then swaps the helper into the bundle,
+   checks the tree against the sealed inventory and stages
+   `/var/lib/phebs-typed-acceptance/<acceptance-id>`.
+7. **Run the cases.** `run-case.sh <acceptance-id> <case>` runs, in order, `success`,
+   `cancel`, `wall`, `hard-death`, `canary` and `dry-run`.
+
+On 2026-11-24 all six cases passed. The results are recorded in
+`../med505_amd64_admission_v3.json`.

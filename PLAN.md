@@ -78,7 +78,9 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-24, `5e77d3e2`) gaps a `.proto` file with an extension group or a
     conflicting declaration instead of refusing its repository (PHEBS-40),
     verified on `dave`.
-  - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
+  - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
+    acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
+  - **Other open lanes:** the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
     [docs/ROADMAP.md](./docs/ROADMAP.md). Epics 25–28 remain unscheduled
@@ -19145,3 +19147,66 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       the upgrade changes nothing else. The only refusals are still the
       synthetic `t222` and `t225` fixtures, so freshness stays `stale`.
       PHEBS-40 is closed.
+- **2026-11-24 — MED-505 rebuilt materials; installed managed SCIP passes natively.**
+  Ben resumed MED-505 and chose the path. The 2026-10-27 offline material
+  package (`med505-offline-materials-v3.tar`) existed only on private hosts and
+  is lost, so the materials are rebuilt on `dave`. Docker runs in an LXD KVM
+  guest on `dave` (Ubuntu 24.04, 4 vCPU, 8 GiB, Docker 29.1.3), not on the host,
+  and no host sudo was used. Under the 2026-11-08 rule the tagged native test
+  is the acceptance; no ceremony or approval record was produced.
+  - **Reproduced unchanged.** Rebuilt from their recorded recipes, these match
+    their existing pins byte for byte: the Go 1.25.7 and 1.25.0 SDKs, Bazel
+    9.0.0, the rules_go 0.59.0 archive, and the three BCR repository-cache files
+    (rules_go's `MODULE.bazel`, `source.json` and version patch). So do
+    scip-go 0.2.7, gopackagesdriver, the two rules_go bootstrap tools and all
+    344 precompiled standard-library archives.
+  - **Re-pinned.** The sysroot's file selection and serializer were never
+    recorded, so `spike/t457/med505materials` now produces it:
+    - a snapshot-pinned GCC 13.3.0-6ubuntu2~24.04.1 image;
+    - a package-closure selection that also copies the merged-usr shared
+      objects to the `lib/` paths glibc's linker scripts and the compiler
+      wrapper name;
+    - a deterministic tar-to-ZIP serializer.
+    `compilerDigestAmd64` becomes `429c220d…`. Two serializations are
+    identical. In a bare container with no host compiler, the wrapper over it
+    builds and runs C and cgo. The archives built through it reproduce the
+    admitted standard library exactly. `med505_amd64_admission_v3.json`
+    records the rebuild and supersedes v2, which keeps its bytes. The t457
+    supersession check now reads v3.
+  - **Findings.** Each of these was found on a failed attempt and fixed:
+    - The planner and launcher pass
+      `--@protobuf//bazel/toolchains:prefer_prebuilt_protoc`, so the neutral
+      root module declares `bazel_dep(protobuf, 33.4)` beside rules_go.
+    - The repository cache ships only its content-addressable entries.
+      Bazel's extracted contents cache keeps upstream group- and
+      world-writable modes, which staged-input custody refuses.
+    - The pre-selection bundle carries no `typed-host-tools.json`; the
+      post-run chain adds it.
+    - `spike/t457/med505materials/bundlegen -final` rebuilds the final
+      selection, inventory and profile, which the post-run step seals only as
+      digests, and reproduces those digests.
+  - **Result.**
+    - Native preparation (45.6 s) and the post-run chain pass.
+    - All six neutral native acceptance cases pass under the unchanged
+      `MeasuredPolicy` (2 CPUs, 4,533,092,352 B, 300 s shared wall), with
+      internal packages at `abb4bc78`:
+
+      | Case | Seconds |
+      |---|---|
+      | success | 229.8 |
+      | cancel | 144.7 |
+      | wall | 377.2 |
+      | hard-death | 169.7 |
+      | canary | 211.4 |
+      | dry-run | 208.5 |
+
+    - Afterwards no containers, scratch images or loop devices remain.
+    - The earlier wall-bound and formatter stops do not recur with the
+      precompiled SDK libraries.
+    - Receipts are in `~/phebs-instance/receipts/med505-2026-11-24/`.
+  - **Not established:** frozen public corpus cohorts, arbitrary repositories,
+    scale, rendered UI or a release. MED-506 (T45.9) is unchanged.
+  - **Steady-state cost.** One changed constant. The provider still hashes the
+    sysroot once per native setup, and its size falls from 193 MB to 170 MB.
+    Nothing is added per request, sync, query or publication. The producers
+    are operator tools outside the server.

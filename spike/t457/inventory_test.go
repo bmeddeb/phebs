@@ -64,24 +64,38 @@ const (
 	goDigestAmd64       = "sha256:b93cdfdbc72f1afc3f21498c80bf3d155a44a9b95e2d690c940511051574bc25"
 )
 
-// assertMED505Supersession requires the provider to seal exactly the sysroot
-// and Go SDK recorded by the retained MED-505 admission, not this inventory's.
-func assertMED505Supersession(t *testing.T) {
+type med505Admission struct {
+	GoSDK struct {
+		GoSHA256 string `json:"go_sha256"`
+	} `json:"go_sdk"`
+	Sysroot struct {
+		SHA256 string `json:"sha256"`
+	} `json:"sysroot"`
+}
+
+func readMED505Admission(t *testing.T, name string) med505Admission {
 	t.Helper()
-	raw, err := os.ReadFile("med505_amd64_admission_v2.json")
+	raw, err := os.ReadFile(name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var admission struct {
-		GoSDK struct {
-			GoSHA256 string `json:"go_sha256"`
-		} `json:"go_sdk"`
-		Sysroot struct {
-			SHA256 string `json:"sha256"`
-		} `json:"sysroot"`
-	}
+	var admission med505Admission
 	if err := json.Unmarshal(raw, &admission); err != nil {
 		t.Fatal(err)
+	}
+	return admission
+}
+
+// assertMED505Supersession requires the provider to seal exactly the sysroot
+// and Go SDK recorded by the current MED-505 admission (v3, the 2026-11-24
+// reproducible rebuild), not this inventory's. The retained v2 record keeps its
+// bytes; v3 must supersede its lost sysroot and keep its Go SDK.
+func assertMED505Supersession(t *testing.T) {
+	t.Helper()
+	admission := readMED505Admission(t, "med505_amd64_admission_v3.json")
+	retained := readMED505Admission(t, "med505_amd64_admission_v2.json")
+	if retained.Sysroot.SHA256 == admission.Sysroot.SHA256 || retained.GoSDK.GoSHA256 != admission.GoSDK.GoSHA256 {
+		t.Fatal("v3 admission must supersede the v2 sysroot and keep its Go SDK")
 	}
 	sysroot, sdk := "sha256:"+admission.Sysroot.SHA256, "sha256:"+admission.GoSDK.GoSHA256
 	src, err := os.ReadFile("../../internal/typedbazel/provider/files.go")
