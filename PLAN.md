@@ -74,6 +74,10 @@ retrieved verbatim). Everything else carries the session's substance.
     [`v0.3.5`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.5)
     (2026-11-24, `ec712eb1`) gaps a conflicting Thrift file instead of
     refusing its repository (PHEBS-39), verified on `dave`.
+    [`v0.3.6`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.6)
+    (2026-11-24, `5e77d3e2`) gaps a `.proto` file with an extension group or a
+    conflicting declaration instead of refusing its repository (PHEBS-40),
+    verified on `dave`.
   - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
@@ -19128,3 +19132,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     - **Release.** Ships as `v0.3.6`. All twelve pack templates take a patch
       bump for the rebind. No claim, card, reader version, approval or expiry
       changes.
+    - **Verified (2026-11-24).** `v0.3.6` was published from `5e77d3e2`
+      (runtime sha256 `11ed5630…`) and installed on `dave` with an unchanged
+      config; the same 11 capabilities are lit. The implementation revision
+      re-extracted all 9 repositories once, within two minutes of the start.
+      `proto-contract` coverage is identical: `success` on 7 repositories and
+      `empty` on the `t222` and `t225` fixtures, with reader `4.0.0`. Contract
+      Atlas item counts per protocol and repository are unchanged. No
+      repository on `dave` holds an extension group or a conflicting `.proto`
+      file, so no gap was expected and none was emitted. The tests and the
+      offline revalidation above carry the gap behaviour; this run shows that
+      the upgrade changes nothing else. The only refusals are still the
+      synthetic `t222` and `t225` fixtures, so freshness stays `stale`.
+      PHEBS-40 is closed.
