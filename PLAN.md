@@ -71,6 +71,9 @@ retrieved verbatim). Everything else carries the session's substance.
     [`v0.3.4`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.4)
     (2026-11-23, `fb0b1265`) records why a released field recipe refused its
     input instead of `unknown` (PHEBS-38), verified on `dave`.
+    [`v0.3.5`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.5)
+    (2026-11-24, `ec712eb1`) gaps a conflicting Thrift file instead of
+    refusing its repository (PHEBS-39), verified on `dave`.
   - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
@@ -19065,3 +19068,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     - **Release.** Ships as `v0.3.5`. All twelve pack templates take a patch
       bump for the rebind. No claim, card, reader version, approval or expiry
       changes.
+    - **Verified (2026-11-24).** `v0.3.5` was published from `ec712eb1`
+      (runtime sha256 `7cc282d1…`) and installed on `dave` with an unchanged
+      config; the same 11 capabilities are lit. First, `v0.3.4` indexed
+      `ec712eb1` with log-only partition diagnostics on: the `thrift-contract`
+      partition refused at `evidence_staging`, and the diagnostics line named
+      `duplicate semantic id has conflicting attributes`, the diagnosed cause.
+      Under `v0.3.5` the implementation revision re-extracted every repository
+      once. All four partitions of `github.com/bmeddeb/phebs` completed,
+      `thrift-contract` reports `disposition=success`, and the repository has
+      one `THRIFT_EXTRACTION_GAP` (`duplicate_field_id`, on
+      `spike/t522/testdata/neutral/idl/packet.thrift`). Contract Atlas now
+      serves its 7 Thrift services and 8 operations, where it served none;
+      every other repository's item count is unchanged. The re-extraction also
+      re-ran the `t225-thrift-field-demo` fixture, whose two refusals now record
+      `classification=unsupported_input:dimension=scip_producer` instead of
+      `unknown`, confirming PHEBS-38 on that fixture too. The only refusals left
+      are the synthetic `t222` and `t225` fixtures, so freshness stays `stale`.
+      The diagnostics drop-in was removed. PHEBS-39 is closed.
