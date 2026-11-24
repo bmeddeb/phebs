@@ -43,9 +43,10 @@ retrieved verbatim). Everything else carries the session's substance.
   - **Linux mechanisms (T42.H2):** H2r.c.c (MED-495), checkpoint/successor
     (MED-496, V24 at `0493be25`, 2026-11-04) and executor/profile ownership
     (MED-497, V29/A1/P5 at `7915f807`) pass natively on `dave`. Pressure,
-    backup and restore composition (MED-498) and source-owned aggregate
-    admission (MED-499) remain. The T42.H2q direct-descriptor probe was retired
-    on 2026-11-09.
+    backup and restore composition (MED-498) passed its focused root-tagged
+    native test on 2026-11-24, as root in an LXD guest on `dave`. Source-owned
+    aggregate admission (MED-499) remains. The T42.H2q direct-descriptor probe
+    was retired on 2026-11-09.
   - **Linux readiness:** T42.2v restored launch and T42.2n readiness remain as
     integration-test work. The T42.2o freeze and the separately authorized
     T42.2 ceremony are retired. T42.3 claims no scale or SLO result unless it
@@ -19210,3 +19211,48 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     sysroot once per native setup, and its size falls from 193 MB to 170 MB.
     Nothing is added per request, sync, query or publication. The producers
     are operator tools outside the server.
+- **2026-11-24 — MED-498 focused Linux pressure, backup and restore composition.**
+  Ben chose the focused integration test over porting the macOS rehearsal
+  pressure flow into the Linux epoch flow. That port would need a
+  2,031,604-file corpus and about two hours per attempt. He also chose to run
+  root inside the existing `med505` LXD KVM guest on `dave` instead of host
+  sudo. Under the 2026-11-08 rule the tagged native test is the acceptance.
+  - **Test.** `TestLinuxPressureRestoreRequiredNative` (tags
+    `phebs_t42_native` and `phebs_t42_pressure_restore_native`) composes three
+    processes from one root-owned test image:
+    - **Root.** Owns the H2m ext4 pressure image (4 GiB, `-m 0`) and borrows
+      one fresh leaf to an unprivileged UID. After the view child is joined, it
+      proves that no process of that UID remains and that the leaf is empty. It
+      then removes the leaf and does the nonforced unmount and exact loop
+      detach.
+    - **View.** A root child in a private mount namespace binds the leaf under
+      a tmpfs. It refuses unless the leaf's path in its copied namespace has
+      the borrowed device and inode; a descriptor from another namespace cannot
+      be a bind source. It then runs the driver with dropped credentials.
+    - **Driver.** Runs the verified signed `v0.3.6` bundle's `serve`, `backup`
+      and `restore` with its data root on the leaf, plus the official
+      SurrealDB 3.2.0 binary. Every tool is root-owned and digest-checked.
+  - **Oracles.** Ballast drives the product's 80/90/75 watermarks:
+    - **85% collect:** new commits are still indexed.
+    - **93% refuse:** indexing holds at the admitted commit; search and pinned
+      source browsing still serve it, and unadmitted needles stay absent.
+    - **78% latched:** the latch still refuses below the soft watermark.
+    - **Resumed (below 75%):** a new head is indexed and the product reports
+      normal.
+
+    Then a live `phebs backup`, a clean stop, `phebs restore` into an empty
+    data root, a restored server whose search results match the pre-backup
+    ones exactly, and a restored successor commit that is indexed. Teardown
+    leaves the leaf empty.
+  - **Result.** Three consecutive passes, about 57 s each. The recorded run is
+    from `d55c53a5`, guest kernel `6.8.0-147-generic`:
+    [`spike/t42h2r/native-pressure-restore-pass-dave-vm-20261124.json`](spike/t42h2r/native-pressure-restore-pass-dave-vm-20261124.json).
+    Two earlier attempts stopped on a cross-namespace bind and on a local
+    origin that lacked `watch: true`; both were test-side.
+  - **Not established:** the host kernel (`dave` runs 7.0; the guest ran 6.8),
+    the macOS rehearsal's full pressure-phase inventory on Linux, scale, SLO
+    or readiness. MED-499, MED-500, MED-501 and MED-504 are unchanged.
+  - **Steady-state cost.** Test-only. No product code changes, so nothing is
+    added per request, sync, query, publication, startup, lock, cache or
+    child. Ordinary CI gains four pure Linux unit tests. The native test runs
+    only when both tags are set.

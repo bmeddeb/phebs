@@ -1,0 +1,134 @@
+{
+  "schema": "t42-linux-pressure-restore-pass-v1",
+  "ticket": "MED-498",
+  "component": "T42.H2 pressure, backup and restore composition (focused)",
+  "source_commit": "d55c53a5fd3fc990ccf44468a0f3656e5771f623",
+  "source_tree": "5ed1892f87d6d1e62f441a24801ea5e05b3b537a",
+  "test": "TestLinuxPressureRestoreRequiredNative",
+  "build_tags": [
+    "phebs_t42_native",
+    "phebs_t42_pressure_restore_native"
+  ],
+  "go_version": "go1.26.5",
+  "test_binary_sha256": "0c530514e9676f86edc9ee5ab335a2b62cf922e36b8ac8eabc83fc8269cfbac3",
+  "test_result": "PASS",
+  "test_elapsed_seconds": 57.05,
+  "host": {
+    "physical_host": "dave",
+    "guest": "LXD KVM guest med505",
+    "guest_os": "Ubuntu 24.04.5 LTS",
+    "guest_kernel": "6.8.0-147-generic",
+    "guest_boot_id": "84c8737e-d3a3-4e7e-96d4-a09e97623807",
+    "vcpus": 4,
+    "memory_kib": 8060064,
+    "note": "Root ran inside the guest by Ben's 2026-11-24 choice; no host sudo. The kernel under test is the guest's, not dave's host kernel."
+  },
+  "invocation": "unshare -m --propagation private -- med498.test -test.run ^TestLinuxPressureRestoreRequiredNative$ -test.timeout=0 -test.v",
+  "inputs": {
+    "pressure_request": {
+      "parent": "/srv/med498/pressure",
+      "image_bytes": 4294967296,
+      "formatter": "/usr/sbin/mkfs.ext4 -> mke2fs",
+      "formatter_sha256": "sha256:07cd24ce58a410cc9cee93c55ae5ac95986df016c5907dc7a49b55389bd41ed2"
+    },
+    "borrowing_uid": 1498,
+    "borrowing_gid": 987,
+    "bundle": {
+      "path": "/srv/med498/runtime",
+      "version": "v0.3.6",
+      "commit": "5e77d3e2cf05a13f75e86afd2999e7876aaa82e5",
+      "verified_by": "releasebundle.Verify"
+    },
+    "surreal_sha256": "sha256:9d631086ebc74fbfd3914b1acdbad0fa8b1655d02acc93f9208455038ee394c1",
+    "surreal_note": "official SurrealDB 3.2.0 binary, the same one dave's instance uses",
+    "git_sha256": "sha256:2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668"
+  },
+  "repeat_runs": {
+    "r3": "PASS (working tree before commit)",
+    "r4": "PASS (pre-gofmt commit 480a3517)",
+    "r5": "PASS (this record)"
+  },
+  "earlier_attempts": {
+    "r1": "view refused: a descriptor from another mount namespace cannot be a bind source; the view now binds the leaf by its device/inode-verified path",
+    "r2": "driver refused at collect: a local origin re-syncs only with watch: true; config corrected"
+  },
+  "result": {
+    "available_after": 4202385408,
+    "available_before": 4202385408,
+    "block_bytes": 4096,
+    "bundle_commit": "5e77d3e2cf05a13f75e86afd2999e7876aaa82e5",
+    "bundle_version": "v0.3.6",
+    "driver": {
+      "backup_output": "backup published: /srv/med498/view/work/backup (sha256:8e678fc494b5d586ab7d2c254cd547c87ef832efb29aed39ba5b4ad9ea89f1e1)",
+      "baseline_used_percent": 1,
+      "commits": [
+        "c28bd1f623aaaed680a4b582fc872f581c96321e",
+        "04a0aa9e73bb21e79e4db1cdd457c64a4308c5ef",
+        "49f80de6c27c91199078319a644a900796416629",
+        "ea1c6315debdae879a010cc4a384f9119bc1a81e",
+        "55a38f6dc705317f4197dc5fc22abeb1dfecefb5",
+        "632219677079095221272a5de3a5e05e32a1a1a0"
+      ],
+      "elapsed_seconds": 55.888964478,
+      "filesystem_bytes": 4219174912,
+      "leaf_empty": true,
+      "phases": [
+        {
+          "ballast_bytes": 3522863104,
+          "elapsed_seconds": 2.995226759,
+          "indexed_commit": "04a0aa9e73bb21e79e4db1cdd457c64a4308c5ef",
+          "name": "collect",
+          "product_pressure": "collect",
+          "product_used_percent": 85,
+          "pushed_commit": "04a0aa9e73bb21e79e4db1cdd457c64a4308c5ef",
+          "statfs_used_percent": 85
+        },
+        {
+          "ballast_bytes": 3898953728,
+          "elapsed_seconds": 11.956689902,
+          "indexed_commit": "04a0aa9e73bb21e79e4db1cdd457c64a4308c5ef",
+          "name": "refuse",
+          "product_pressure": "refuse",
+          "product_used_percent": 94,
+          "pushed_commit": "49f80de6c27c91199078319a644a900796416629",
+          "statfs_used_percent": 93
+        },
+        {
+          "ballast_bytes": 3265814528,
+          "elapsed_seconds": 10.680907767,
+          "indexed_commit": "04a0aa9e73bb21e79e4db1cdd457c64a4308c5ef",
+          "name": "latched",
+          "product_pressure": "refuse",
+          "product_used_percent": 78,
+          "pushed_commit": "ea1c6315debdae879a010cc4a384f9119bc1a81e",
+          "statfs_used_percent": 78
+        },
+        {
+          "ballast_bytes": 0,
+          "elapsed_seconds": 1.341013032,
+          "indexed_commit": "55a38f6dc705317f4197dc5fc22abeb1dfecefb5",
+          "name": "resumed",
+          "product_pressure": "normal",
+          "product_used_percent": 1,
+          "pushed_commit": "55a38f6dc705317f4197dc5fc22abeb1dfecefb5",
+          "statfs_used_percent": 1
+        }
+      ],
+      "repository": "local/srv/med498/view/home/origin",
+      "restore_output": "restore verified and imported: sha256:8e678fc494b5d586ab7d2c254cd547c87ef832efb29aed39ba5b4ad9ea89f1e1",
+      "restored_search_matches": 5,
+      "restored_successor_commit": "632219677079095221272a5de3a5e05e32a1a1a0",
+      "version": "v0.3.6"
+    },
+    "elapsed_seconds": 56.043281385,
+    "image_bytes": 4294967296,
+    "image_removed": true,
+    "leaf_device": 1792,
+    "leaf_inode": 131074,
+    "leaf_removed": true,
+    "schema": "t42-med498-pressure-restore-v1",
+    "uid_drained": true,
+    "usable_bytes": 4219174912
+  },
+  "claims": "Integration-tested pressure admission (collect, refuse, latch, resume), reads under refusal, live backup, restore into an empty data root, identical restored search, a restored successor, owner drain and nonforced teardown on one ext4 pressure image. No scale, SLO, readiness or full-rehearsal claim."
+}
