@@ -1,0 +1,12 @@
+# MED-505 amd64 compiler/runtime image (rebuilt 2026-11-24).
+# The base is pinned by digest. Compiler packages come from the Ubuntu snapshot of
+# 2026-11-24, so a rebuild resolves the same versions. ca-certificates comes from the
+# live archive first only because the snapshot service is HTTPS-only. It is not part
+# of the sysroot selection.
+FROM ubuntu:24.04@sha256:562111b88caa79c71391c0c4d3c2114a7d5c35915c20561fd893cb1e07929e6b
+RUN apt-get update -qq \
+ && apt-get install -y -qq --no-install-recommends ca-certificates \
+ && apt-get update -qq --snapshot 20261124T000000Z \
+ && apt-get install -y -qq --no-install-recommends --snapshot 20261124T000000Z \
+      gcc-13=13.3.0-6ubuntu2~24.04.1 libc6-dev \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/*.bin /var/log/apt /var/log/dpkg.log
