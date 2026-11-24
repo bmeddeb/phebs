@@ -284,12 +284,14 @@ Common invariants on every emitted fact:
 is parser-only: no import resolution, no cross-file linking, no descriptor
 compilation, no code execution, and no Buf invocation.
 
-**Fail-closed, never partial.** Any candidate read, parse, tree-walk, span, or
-complexity failure aborts the whole staged run: `Extract` returns an empty
+**Fail-closed, never partial.** Apart from the two file gaps of §6 (an
+extension group, or a conflicting repeated declaration; PHEBS-40), any
+candidate read, parse, tree-walk, span, or complexity failure aborts the whole
+staged run: `Extract` returns an empty
 `Coverage` and the error, because "returning successful partial coverage would
-replace known evidence with a subset." A malformed declaration, or an
-extension construct whose semantics need descriptor linking (§6), is therefore a
-run failure, never a silent empty contract. The kinds listed under **Not
+replace known evidence with a subset." A malformed declaration is therefore a
+run failure, and an extension group is an explicit file gap (§6); neither is
+ever a silent empty contract. The kinds listed under **Not
 emitted** are a declared scope limit, not a failure.
 
 ## 6. Type-reference resolution states and the explicit gap taxonomy
@@ -316,8 +318,9 @@ link** — evidence of the reader's boundary, not an error and not a miss.
 These states are recorded **per reference, inside the fact Detail**, not as
 separate assertions. The containing `DECLARES_FIELD` or `DECLARES_OPERATION` is
 still emitted at `Tier: "exact"` — the declaration was found; only its type link
-is unproved — and `protodecl` emits no unresolved assertion, so the coverage
-manifest's unresolved count stays 0. A scoring round counts these states by
+is unproved — and `protodecl` emits no unresolved assertion for a type link,
+so a file without a file gap (below) adds nothing to the coverage manifest's
+unresolved count. A scoring round counts these states by
 reading `type`, `map.key`/`map.value`, or `request`/`response` from the Detail,
 and counts them against references, never against the declaration denominator.
 
@@ -329,14 +332,36 @@ the file — resolution is order-independent), or `unresolved` with
 with message-only lookup.
 
 Beyond type references and extendees, the extractor fails closed (whole-run
-error, §5) on: an extension group ("extension groups require descriptor linking
-for their synthetic message" — the group also declares a synthetic nested
-message and an extendee-positioned field, both unprovable without linking); a
-map field in an extension body (a parser-level error; the grammar admits only
-fields and groups there); a missing name/tag/type on any service, rpc, message,
-field, oneof, group, map, or extension field; an invalid parser span or a
-parser-text/source mismatch; and any input exceeding the §3 complexity
-ceilings.
+error, §5) on: a map field in an extension body (a parser-level error; the
+grammar admits only fields and groups there); a missing name/tag/type on any
+service, rpc, message, field, oneof, group, map, or extension field; an invalid
+parser span or a parser-text/source mismatch; and any input exceeding the §3
+complexity ceilings.
+
+**File gaps (PHEBS-40, 2026-11-24).** Two cases no longer fail the run; each
+makes its file one explicit gap instead. The file emits a single
+`PROTO_EXTRACTION_GAP` assertion (subject: the file path; object: the reason;
+`Tier: "unresolved"`; no lineage; rule `proto-file-gap-v1`; detail
+`{"schema":"proto-gap-detail-v1","reason":…}`), cited at the construct that
+caused it, and none of the file's declarations. The reasons are:
+
+- `extension_group`: the file has an extension group. This is valid proto2,
+  but its synthetic message and extendee-positioned field still need
+  descriptor linking, so the file abstains rather than guesses.
+- `duplicate_field_number`: one field number repeats in a message with
+  different attributes (a different name, type or cardinality).
+- `conflicting_declaration`: any other identity repeats with different
+  attributes, for example an rpc declared twice with different types.
+
+The last two name the first conflicting identity in the file; the
+reference compiler rejects such a file, and the evidence store refuses two
+assertions of one identity with different attributes, which used to refuse
+the whole run. Identical repeats are not conflicts and are still declared,
+since the store merges them. Each gap counts once in the coverage manifest's
+unresolved count. Every other condition above, parse failures included,
+still fails the whole run. A file without a gap yields exactly the facts it
+did before: the reader version stays `4.0.0`, and implementation revision 1
+makes each repository re-extract once.
 
 ## 7. Shared identity/input contract with T47.2 (the exact Caller Map join)
 

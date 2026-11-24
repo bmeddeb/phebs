@@ -19086,3 +19086,45 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       `unknown`, confirming PHEBS-38 on that fixture too. The only refusals left
       are the synthetic `t222` and `t225` fixtures, so freshness stays `stale`.
       The diagnostics drop-in was removed. PHEBS-39 is closed.
+  - **PHEBS-40, a gapped `.proto` file no longer refuses the repository (2026-11-24).**
+    Closes the `protodecl` hole PHEBS-39 left open. Before this change, one
+    `.proto` file with an extension group made `protodecl` refuse the whole
+    `proto-contract` run. One file repeating a field number or declaration
+    with different attributes made the evidence store refuse it at staging.
+    Either way Contract Atlas served no protobuf for the repository. A scan of
+    the Go module cache with the shipped extractor found eight such files in
+    `google.golang.org/protobuf` v1.36.11, all valid proto2 with extension
+    groups. No repository connected to `dave` has one.
+    - **Decision (Ben, 2026-11-24: the narrow posture).** This amends the
+      T49.1a fail-closed rule (`docs/PROTOBUF_DECLARATION_IDENTITY.md` §5/§6).
+      Such a file becomes one tier-`unresolved` `PROTO_EXTRACTION_GAP`, cited
+      at the construct, and emits none of its declarations. The reason is
+      `extension_group`, `duplicate_field_number`, or
+      `conflicting_declaration`. Parse, read, complexity, span and malformed
+      inputs still refuse the whole run. The wider option, a gap for every
+      file-local failure, was not taken. Identical repeats are still
+      declared. Coverage reports one unresolved assertion per gap, which the
+      worker reconciles.
+    - **Claim and revalidation.** The signed protobuf-atlas card already
+      claims declarations "with … explicit gaps", and its scope says
+      unsupported inputs "retain the extractor's explicit gap", so the card
+      and claim stay. Revalidated offline, per file, against `ec712eb1`. Over
+      the locked T47.2 population (etcd, grpc-go, containerd: 131 files,
+      6,081 facts, the T49.1b universe count), output is byte-identical with
+      no gap. Over 1,922 more files in seven module-cache trees, every file
+      the old code accepted without a conflict is byte-identical. Fourteen
+      files become one gap each: 12 `extension_group` and 2
+      `duplicate_field_number`. The 138 parse and malformed refusals are
+      unchanged. `google.golang.org/protobuf` now publishes in full, while
+      `bufbuild/buf` and `bufbuild/protocompile` still refuse, because their
+      test data holds files that do not parse.
+    - **Implementation revision 1.** The reader version stays `4.0.0`, which
+      the signed recipe binds. Revision 1 makes each repository re-extract
+      once (the PHEBS-37 mechanism).
+    - **Steady-state cost.** One file's facts are held until that file is
+      walked, plus one map entry per declaration for the conflict check.
+      Both are bounded by the §3 complexity preflight. No new read, write,
+      lock, cache, child, timer or schema change.
+    - **Release.** Ships as `v0.3.6`. All twelve pack templates take a patch
+      bump for the rebind. No claim, card, reader version, approval or expiry
+      changes.

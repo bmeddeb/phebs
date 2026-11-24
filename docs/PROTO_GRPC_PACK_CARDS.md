@@ -44,6 +44,15 @@ seals no validation and adds no PackRelease. This card's `experimental-dark`
 status, `not_run` validation and unassigned independent-validation owner are
 unchanged.
 
+**File gaps (PHEBS-40, 2026-11-24).** A `.proto` file with an extension group,
+or with one identity declared twice with different attributes, is one
+`PROTO_EXTRACTION_GAP` (`extension_group`, `duplicate_field_number` or
+`conflicting_declaration`) and none of its declarations; the rest of the
+repository still publishes. Contract Atlas does not list that file's
+declarations. A file that does not parse still refuses the repository's whole
+run. The claim is unchanged: these are the explicit gaps the card already
+names, and every other file yields the facts it did before.
+
 ## Pack: Go gRPC syntactic consumers
 
 | Field | Value |
