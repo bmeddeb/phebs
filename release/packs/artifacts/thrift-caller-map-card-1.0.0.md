@@ -18,8 +18,12 @@ A resolved row needs all of the following:
   generated file in the repository-root `generated-from-snapshot.json`
   (version `t20-generated-from-v1`), committed at the same revision. phebs
   never infers this relation from paths, layout or the generator header;
-- that declaration's `thrift-contract` operation, which supplies the
-  declaration lineage.
+- that declaration's `thrift-contract` operation for the same service and
+  method, which supplies the declaration lineage and the operation's
+  spelling. The generated Go package is not used as the Thrift scope (the
+  compiler lowercases the IDL name when no `namespace go` is set), so a caller
+  is served under the operation Contract Atlas shows. A generated method that
+  the mapped declaration does not declare is an explicit abstention.
 
 Without that committed mapping a call is an explicit abstention, never a
 resolved caller.
@@ -34,7 +38,10 @@ The surfaces are those of the protobuf Caller Map, for `protocol=thrift`:
 
 **Recipe.** `thrift-contract@1.1.2` with `thrift-caller@1.6.0-released.1`.
 The caller algorithm is `thrift-caller` 1.6.0 unchanged, the reader shipped
-dark since T20.8 and resolved through the shared T30.6g resolver catalog. The
+dark since T20.8. It resolves through the shared T30.6g resolver catalog at
+resolver pack version 1.3.0, whose materialization policy names the Thrift
+operation binding `mapped-declaration-service-method-v1` (added in PHEBS-42
+after verification against a real Apache Thrift repository). The
 distinct admission version separates candidate and caller generation
 identities, so experimental Thrift caller publications are refused by the
 existing read fences and replaced through startup reconciliation.

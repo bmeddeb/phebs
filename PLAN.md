@@ -19382,3 +19382,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   - **Release.** Ships as `v0.3.8` with fourteen signed records. The thirteen
     existing templates take a patch bump for the rebind; no claim, card, reader
     version, approval or expiry changes. `thrift-caller-map` 1.0.0 is new.
+  - **Verification finding and fix (2026-11-25, Ben chose "fix the reader
+    first").** Before publishing, `v0.3.8` was trial-run on dave against
+    beltran/gohive (real Apache Thrift 0.18.1 output, committed mapping). Its
+    hand-written `client.OpenSession` and `c.conn.client.ExecuteStatement`
+    calls produced no row at all: the generated symbol spelled the operation
+    from the Go package (`/hiveserver.TCLIService/OpenSession`) while
+    `thrift-contract` declares `/HiveServer.TCLIService/OpenSession`. The
+    compiler lowercases the IDL name when no `namespace go` is set; decision
+    D1 keeps the basename. Only fb303, whose names agree, resolved.
+    - **Fix.** The resolver catalog binds a resolved Thrift generated symbol
+      to the one operation its mapped declaration lineage declares for the
+      same service and method (`ThriftOperationBinding`,
+      `mapped-declaration-service-method-v1`), and serves that spelling. A
+      method the declaration does not declare becomes an explicit
+      `operation_not_declared` abstention instead of a resolved row nobody can
+      query. Resolver pack version 1.2.0 → 1.3.0; the reader stays
+      `thrift-caller` 1.6.0, and gRPC symbol binding is unchanged (its records
+      differ only in `pack_version`).
+    - **Acceptance.** A regression test in gohive's shape (mixed-case IDL, no
+      `namespace go`, a factory-built local client and a struct-field client)
+      runs materialization, the direct resolver and the caller scan; it fails
+      without the binding. Then the gates, and dave on the rebuilt `v0.3.8`.
+    - **Steady-state cost.** The catalog keeps, for Thrift only, the declared
+      operations it already reads, keyed by lineage and `Service/method`,
+      under a new 16 MiB `MaxDeclarationOperationBytes` budget (25,000
+      declaration records cap the count). No new worker, I/O, lock, schema or
+      read path; the version bump re-materializes each catalog once.
+    - **Second finding (not fixed here).** Whole-repository observation
+      refuses the whole repository when one selected file exceeds the 4 MiB
+      per-blob bound (gohive's 6 MB generated `hive_metastore.go`), and the
+      refusal is stored as `unknown`: `blob_bytes` is not a valid dimension
+      for the observation stage. It predates PHEBS-42; recorded as a Known
+      limit in the release notes and tracked separately.

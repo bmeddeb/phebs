@@ -107,6 +107,7 @@ type blobBudget struct {
 type materializationBudget struct {
 	declarationRecords           int
 	declarationPathBytes         int
+	declarationOperationBytes    int
 	generatedCandidateExpansions int
 	generatedCandidateBytes      int
 	generatedSymbolDescriptors   int
@@ -674,6 +675,9 @@ func emitModulesAndValidateGeneratedPaths(
 
 type declarationTargets struct {
 	byPath map[string]map[string]struct{}
+	// operations holds, for Thrift only, lineage -> "Service/method" -> the
+	// declared operations spelled that way (ThriftOperationBinding).
+	operations map[string]map[string][]string
 }
 
 func emitDeclarationTargets(
@@ -684,7 +688,10 @@ func emitDeclarationTargets(
 	budget *materializationBudget,
 	write func(json.RawMessage) error,
 ) (*declarationTargets, error) {
-	targets := &declarationTargets{byPath: make(map[string]map[string]struct{})}
+	targets := &declarationTargets{
+		byPath:     make(map[string]map[string]struct{}),
+		operations: make(map[string]map[string][]string),
+	}
 	if input == nil {
 		if err := writeJSON(write, generatedRecord{
 			Schema:       resolvercatalog.RecordSchema,
@@ -758,6 +765,13 @@ func emitDeclarationTargets(
 				targets.byPath[assertion.Subject] = lineages
 			}
 			lineages[assertion.Lineage] = struct{}{}
+			if current.protocol == ProtocolThrift {
+				if err := targets.addThriftOperation(
+					budget, assertion.Lineage, assertion.Object,
+				); err != nil {
+					return nil, err
+				}
+			}
 			if err := writeJSON(write, declarationRecord{
 				Schema:       resolvercatalog.RecordSchema,
 				RecordSchema: DeclarationRecordSchema,
@@ -1024,7 +1038,7 @@ func emitGeneratedMappings(
 			return err
 		}
 		if err := emitGeneratedSymbols(
-			ctx, current, plan, key, state, reason, group.candidates, budget, write,
+			ctx, current, plan, key, state, reason, group.candidates, targets, budget, write,
 		); err != nil {
 			return err
 		}
@@ -1039,6 +1053,7 @@ func emitGeneratedSymbols(
 	key mappingKey,
 	state, reason string,
 	candidates []generatedCandidate,
+	targets *declarationTargets,
 	budget *materializationBudget,
 	write func(json.RawMessage) error,
 ) error {
@@ -1103,6 +1118,18 @@ func emitGeneratedSymbols(
 		if state == StateResolved && len(candidates) == 1 {
 			record.DeclarationPath = candidates[0].DeclarationPath
 			record.DeclarationLineage = candidates[0].DeclarationLineage
+			if current.protocol == ProtocolThrift {
+				operation, bound, unboundReason := targets.bindThriftOperation(
+					record.DeclarationLineage, symbol.Operation,
+				)
+				if bound {
+					record.Operation = operation
+				} else {
+					// An abstention carries no declaration authority.
+					record.State, record.Reason = StateUnavailable, unboundReason
+					record.DeclarationPath, record.DeclarationLineage = "", ""
+				}
+			}
 		} else if record.Reason == "" {
 			record.Reason = "generated_mapping_" + state
 		}
@@ -1392,4 +1419,73 @@ func targetPathUnder(
 		}
 	}
 	return false, nil
+}
+
+// thriftServiceMethod returns "Service/method" for a Thrift operation spelled
+// "scope.Service/method" (a DECLARES_OPERATION object) or
+// "/scope.Service/method" (a generated caller operation). The scope is a
+// single namespace segment or an IDL basename, so the service is everything
+// after the last dot.
+func thriftServiceMethod(operation string) (string, bool) {
+	rest := strings.TrimPrefix(operation, "/")
+	qualified, method, ok := strings.Cut(rest, "/")
+	if !ok || method == "" || strings.Contains(method, "/") {
+		return "", false
+	}
+	dot := strings.LastIndexByte(qualified, '.')
+	if dot < 0 || dot == len(qualified)-1 {
+		return "", false
+	}
+	return qualified[dot+1:] + "/" + method, true
+}
+
+func (targets *declarationTargets) addThriftOperation(
+	budget *materializationBudget,
+	lineage, operation string,
+) error {
+	key, ok := thriftServiceMethod(operation)
+	if !ok {
+		// A declaration this binding cannot key is simply never a target.
+		return nil
+	}
+	// Caller rows and Caller Map queries spell operations with a leading slash.
+	operation = "/" + strings.TrimPrefix(operation, "/")
+	byKey := targets.operations[lineage]
+	if byKey == nil {
+		byKey = make(map[string][]string)
+		targets.operations[lineage] = byKey
+	}
+	if slices.Contains(byKey[key], operation) {
+		return nil
+	}
+	if len(operation) > MaxDeclarationOperationBytes-budget.declarationOperationBytes {
+		return resolvercatalog.ErrLimit
+	}
+	budget.declarationOperationBytes += len(operation)
+	byKey[key] = append(byKey[key], operation)
+	return nil
+}
+
+// bindThriftOperation applies ThriftOperationBinding: the generated symbol's
+// service and method must name exactly one operation declared by the mapped
+// lineage, and that declared spelling is the caller's operation.
+func (targets *declarationTargets) bindThriftOperation(
+	lineage, generated string,
+) (string, bool, string) {
+	key, ok := thriftServiceMethod(generated)
+	if !ok {
+		return "", false, "generated_operation_unkeyed"
+	}
+	var declared []string
+	if targets != nil {
+		declared = targets.operations[lineage][key]
+	}
+	switch len(declared) {
+	case 0:
+		return "", false, "operation_not_declared"
+	case 1:
+		return declared[0], true, ""
+	default:
+		return "", false, "operation_declared_ambiguously"
+	}
 }

@@ -1705,7 +1705,12 @@ It serves Caller Map for `protocol=thrift`:
   needs one direct mapping in the committed repository-root
   `generated-from-snapshot.json` (see
   [Product workflows](./WORKFLOWS.md#evaluating-a-separated-idlsource-monorepo));
-  without it a call is an explicit abstention;
+  without it a call is an explicit abstention. A resolved caller is served
+  under the operation the mapped declaration declares for the same service
+  and method, which is the spelling Contract Atlas shows, even when the
+  generated Go package differs (for example `hiveserver` generated from
+  `HiveServer.thrift`). A generated method the declaration does not declare is
+  an `operation_not_declared` abstention;
 - the existing exact Caller Map, progress and citation routes, the MCP
   `list_operation_callers` and `read_operation_caller_citation` tools, and the
   `contract-caller-map` capability. Its declaration extractor also lights

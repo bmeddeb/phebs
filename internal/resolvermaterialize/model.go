@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PackVersion = "1.2.0"
+	PackVersion = "1.3.0"
 
 	GoModulePackName            = "go-module"
 	GRPCGeneratedPackName       = "grpc-generated-attribution"
@@ -27,10 +27,16 @@ const (
 	GoModuleRecordSchema        = "phebs-resolver-go-module-v1"
 	GeneratedRecordSchema       = "phebs-resolver-generated-attribution-v2"
 	GeneratedSymbolRecordSchema = "phebs-resolver-generated-go-symbol-v1"
-	DeclarationRecordSchema     = "phebs-resolver-declaration-target-v1"
-	ProtocolMemberRecordSchema  = "phebs-resolver-protocol-member-v2"
-	MemberMetadataSchema        = "phebs-resolver-member-metadata-v2"
-	MaterializationPolicyName   = "phebs-resolver-materialization-policy-v2"
+	// ThriftOperationBinding (PHEBS-42) names how a Thrift generated client
+	// symbol takes its operation: the one operation its mapped declaration
+	// lineage declares for the same service and method. The generated Go
+	// package is not the Thrift scope (the compiler lowercases the IDL name
+	// when no `namespace go` is set), so the declaration's spelling wins.
+	ThriftOperationBinding     = "mapped-declaration-service-method-v1"
+	DeclarationRecordSchema    = "phebs-resolver-declaration-target-v1"
+	ProtocolMemberRecordSchema = "phebs-resolver-protocol-member-v2"
+	MemberMetadataSchema       = "phebs-resolver-member-metadata-v2"
+	MaterializationPolicyName  = "phebs-resolver-materialization-policy-v2"
 
 	ConsumerUnitRecordSchema   = "phebs-resolver-consumer-unit-v1"
 	ConsumerUnitMemberName     = "go-unit-attribution-v1.ndjson"
@@ -57,6 +63,7 @@ const (
 	MaxGeneratedCandidateBytes                  = 16 << 20
 	MaxDeclarationRecords                       = 25_000
 	MaxDeclarationPathBytes                     = 16 << 20
+	MaxDeclarationOperationBytes                = 16 << 20
 	MaxGeneratedSymbolDescriptors               = 100_000
 	MaxGeneratedSymbolIdentityBytes             = 32 << 20
 	MaxGeneratedSymbolSources                   = 25_000
@@ -230,6 +237,7 @@ type MaterializationPolicy struct {
 	ModuleOrdering                        string `json:"module_ordering"`
 	GeneratedOrdering                     string `json:"generated_ordering"`
 	GeneratedSymbolIdentityAccounting     string `json:"generated_symbol_identity_accounting"`
+	ThriftOperationBinding                string `json:"thrift_operation_binding"`
 	MaxGoModuleBytes                      int    `json:"max_go_module_bytes"`
 	MaxSnapshotBlobBytes                  int64  `json:"max_snapshot_blob_bytes"`
 	MaxInputBlobReads                     int    `json:"max_input_blob_reads"`
@@ -243,6 +251,7 @@ type MaterializationPolicy struct {
 	MaxGeneratedCandidateBytes            int    `json:"max_generated_candidate_bytes"`
 	MaxDeclarationRecords                 int    `json:"max_declaration_records"`
 	MaxDeclarationPathBytes               int    `json:"max_declaration_path_bytes"`
+	MaxDeclarationOperationBytes          int    `json:"max_declaration_operation_bytes"`
 	MaxGeneratedSymbolDescriptors         int    `json:"max_generated_symbol_descriptors"`
 	MaxGeneratedSymbolIdentityBytes       int    `json:"max_generated_symbol_identity_bytes"`
 	MaxGeneratedSymbolSources             int    `json:"max_generated_symbol_sources"`
@@ -270,6 +279,7 @@ func FrozenMaterializationPolicy() MaterializationPolicy {
 		ModuleOrdering:                        "candidate-caller-order-v1",
 		GeneratedOrdering:                     "declaration-input-mapping-symbol-sorted-candidates-invocation-v2",
 		GeneratedSymbolIdentityAccounting:     "catalog-wide-unique-source-plus-descriptor-v1",
+		ThriftOperationBinding:                ThriftOperationBinding,
 		MaxGoModuleBytes:                      resolverinput.MaxGoModuleBytes,
 		MaxSnapshotBlobBytes:                  extract.MaxBlobBytes,
 		MaxInputBlobReads:                     MaxInputBlobReads,
@@ -283,6 +293,7 @@ func FrozenMaterializationPolicy() MaterializationPolicy {
 		MaxGeneratedCandidateBytes:            MaxGeneratedCandidateBytes,
 		MaxDeclarationRecords:                 MaxDeclarationRecords,
 		MaxDeclarationPathBytes:               MaxDeclarationPathBytes,
+		MaxDeclarationOperationBytes:          MaxDeclarationOperationBytes,
 		MaxGeneratedSymbolDescriptors:         MaxGeneratedSymbolDescriptors,
 		MaxGeneratedSymbolIdentityBytes:       MaxGeneratedSymbolIdentityBytes,
 		MaxGeneratedSymbolSources:             MaxGeneratedSymbolSources,

@@ -21302,6 +21302,12 @@ existing exact Caller Map routes and caller MCP tools. thriftrw/YARPC clients
 are not resolved, name-matching `thrift-consumer` stays experimental, and
 caller comparison and operation Impact stay protobuf-only. See the 2026-11-25
 PHEBS-42 ADR in `PLAN.md`.
+A trial on dave against beltran/gohive found that a generated Go package that
+differs from the Thrift scope (`hiveserver` vs `HiveServer`) dropped every call;
+the resolver catalog now binds Thrift symbols to the declared operation
+(resolver pack 1.3.0). Separately, a selected file over the 4 MiB per-blob
+bound refuses whole-repository observation and is stored as `unknown`; that
+predates PHEBS-42 and needs its own ticket.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 

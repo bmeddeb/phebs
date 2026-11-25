@@ -1567,7 +1567,12 @@ func resolvedMaterializeRequest(
 			materializeTestAssertion(grpc.RunID, "idl/proto/orders.proto", "lineage-grpc", 1),
 		},
 		thrift.RunID: {
-			materializeTestAssertion(thrift.RunID, "idl/thrift/ledger.thrift", "lineage-thrift", 2),
+			// PHEBS-42: the declared spelling a Thrift generated symbol binds to.
+			func() store.Assertion {
+				row := materializeTestAssertion(thrift.RunID, "idl/thrift/ledger.thrift", "lineage-thrift", 2)
+				row.Object = "ledger.Ledger/Get"
+				return row
+			}(),
 		},
 	})
 	manifest := &materializeTestManifest{identity: testManifestDigest, files: files}

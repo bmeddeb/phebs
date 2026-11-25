@@ -90,7 +90,7 @@ func TestGeneratedSymbolSourceCapRefusesBeforeBlobRead(t *testing.T) {
 	}
 	err := emitGeneratedSymbols(
 		context.Background(), adapter{protocol: ProtocolGRPC}, plan,
-		mappingKey{generated: file.Path}, StateUnavailable, "missing", nil,
+		mappingKey{generated: file.Path}, StateUnavailable, "missing", nil, nil,
 		&materializationBudget{generatedSourceObjects: sources},
 		func(json.RawMessage) error { return nil },
 	)

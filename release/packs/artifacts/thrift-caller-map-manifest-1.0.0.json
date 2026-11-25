@@ -12,7 +12,8 @@
       "thrift-contract@1.1.2",
       "thrift-caller@1.6.0-released.1"
     ],
-    "caller_algorithm": "thrift-caller@1.6.0"
+    "caller_algorithm": "thrift-caller@1.6.0",
+    "resolver_catalog": "resolver pack 1.3.0, thrift_operation_binding mapped-declaration-service-method-v1"
   },
   "admission": "The released Thrift caller version is admitted only through a verified signed selection; candidate and caller identity fences refuse experimental generations.",
   "surfaces": {
