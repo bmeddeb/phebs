@@ -1,7 +1,7 @@
 {
   "release_schema_version": "1.0",
-  "release_id": "rel-phebs.protobuf.field.go-1.0.11",
-  "release_version": "1.0.11",
+  "release_id": "rel-phebs.protobuf.field.go-1.0.12",
+  "release_version": "1.0.12",
   "pack_id": "phebs.protobuf.field.go",
   "pack_claim_version": "1.0.0",
   "card": {
