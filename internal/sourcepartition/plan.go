@@ -39,10 +39,13 @@ type BuildRequest struct {
 
 type BuildMetrics struct {
 	SelectedPlacements int
-	UniqueBlobs        int
-	UniqueBlobBytes    int64
-	PeakSpoolBytes     int64
-	currentSpoolBytes  int64
+	// OversizedBlobPlacements counts selected placements whose blob exceeds
+	// MaxBlobBytes; they are planned but never read (PHEBS-43).
+	OversizedBlobPlacements int
+	UniqueBlobs             int
+	UniqueBlobBytes         int64
+	PeakSpoolBytes          int64
+	currentSpoolBytes       int64
 }
 
 // SuperRootBuildMetrics makes physical reuse observable rather than inferring
@@ -229,12 +232,11 @@ func planLeaves(
 			if record.Kind != "regular" || !matches(request.Policy, record.Path) {
 				return nil
 			}
-			if record.DeclaredBytes > MaxBlobBytes {
-				return checkPlanLimit(
-					pipelinerefusal.DimensionBlobBytes,
-					record.DeclaredBytes, MaxBlobBytes,
-					"selected blob exceeds the per-blob bound",
-				)
+			if record.DeclaredBytes < 0 {
+				return invalidf("selected blob size is negative")
+			}
+			if Oversized(record.DeclaredBytes) {
+				metrics.OversizedBlobPlacements++
 			}
 			if metrics.SelectedPlacements == math.MaxInt {
 				return fmt.Errorf("%w: selected placement count overflows", ErrTooLarge)
@@ -288,7 +290,7 @@ func planLeaves(
 
 func appendSpool(destination *spool, record spoolRecord) error {
 	if destination.placements == math.MaxInt ||
-		record.DeclaredBytes > math.MaxInt64-destination.declaredBytes {
+		ReadBytes(record.DeclaredBytes) > math.MaxInt64-destination.declaredBytes {
 		return fmt.Errorf("%w: spool summary overflows", ErrTooLarge)
 	}
 	payload, err := json.Marshal(record)
@@ -331,7 +333,7 @@ func appendSpool(destination *spool, record spoolRecord) error {
 		return io.ErrShortWrite
 	}
 	destination.placements++
-	destination.declaredBytes += record.DeclaredBytes
+	destination.declaredBytes += ReadBytes(record.DeclaredBytes)
 	return nil
 }
 
@@ -472,8 +474,7 @@ func gitObjectAndHashValid(record spoolRecord) bool {
 		repopath.Validate(record.Path) != nil ||
 		(record.Mode != "100644" && record.Mode != "100755") ||
 		len(record.Revisions) == 0 || !slices.IsSorted(record.Revisions) ||
-		record.DeclaredBytes < 0 ||
-		record.DeclaredBytes > MaxBlobBytes {
+		record.DeclaredBytes < 0 {
 		return false
 	}
 	hash, err := hex.DecodeString(record.Hash)
@@ -579,7 +580,7 @@ func encodeMember(ctx context.Context, output io.Writer, leaf *spool) (Member, e
 		if err := ctx.Err(); err != nil {
 			return Member{}, err
 		}
-		if blob.DeclaredBytes > MaxPartitionBlobBytes-member.DeclaredBytes {
+		if ReadBytes(blob.DeclaredBytes) > MaxPartitionBlobBytes-member.DeclaredBytes {
 			return Member{}, invalidf("planned member bytes violate their partition")
 		}
 		payload, err := json.Marshal(blob)
@@ -594,7 +595,7 @@ func encodeMember(ctx context.Context, output io.Writer, leaf *spool) (Member, e
 		if err != nil || written != len(payload) {
 			return Member{}, errors.Join(err, io.ErrShortWrite)
 		}
-		member.DeclaredBytes += blob.DeclaredBytes
+		member.DeclaredBytes += ReadBytes(blob.DeclaredBytes)
 		member.ContentBytes += int64(written)
 		if index == 0 {
 			member.FirstObjectID = blob.ObjectID

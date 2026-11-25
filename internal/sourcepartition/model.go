@@ -46,6 +46,22 @@ const (
 	MaxBatchDuration                = 5 * time.Minute
 )
 
+// Oversized reports whether one selected blob is larger than MaxBlobBytes.
+// Such a blob stays selected with its real declared size and every placement,
+// but no reader ever requests its bytes: observation records it as a per-file
+// gap (PHEBS-43) instead of refusing the whole repository.
+func Oversized(declaredBytes int64) bool { return declaredBytes > MaxBlobBytes }
+
+// ReadBytes is what one selected blob contributes to member, manifest and
+// super-root byte totals and to every read bound: its declared size, or zero
+// when it is oversized and therefore never read.
+func ReadBytes(declaredBytes int64) int64 {
+	if Oversized(declaredBytes) {
+		return 0
+	}
+	return declaredBytes
+}
+
 var (
 	ErrInvalid       = errors.New("invalid source partition")
 	ErrTooLarge      = errors.New("source partition limit exceeded")
@@ -244,7 +260,7 @@ func matches(policy Policy, path string) bool {
 
 func validateBlobRecord(record BlobRecord, revisionCount int) error {
 	if record.Schema != MemberSchema || !gitobj.IsObjectID(record.ObjectID) ||
-		record.DeclaredBytes < 0 || record.DeclaredBytes > MaxBlobBytes ||
+		record.DeclaredBytes < 0 ||
 		len(record.Placements) < 1 || len(record.Placements) > MaxPlacementsPerPartition {
 		return invalidf("blob record identity or bounds are invalid")
 	}

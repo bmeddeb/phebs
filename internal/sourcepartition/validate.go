@@ -102,7 +102,7 @@ func ValidateManifest(manifest Manifest) error {
 	}
 	if (manifest.BlobCount == 0) != (len(manifest.Members) == 0) ||
 		(manifest.BlobCount == 0) != (manifest.PlacementCount == 0) ||
-		(manifest.BlobCount == 0) != (manifest.DeclaredBytes == 0) ||
+		(manifest.BlobCount == 0 && manifest.DeclaredBytes != 0) ||
 		(manifest.BlobCount == 0) != (manifest.EncodedMemberBytes == 0) {
 		return invalidf("empty manifest shape is inconsistent")
 	}
@@ -269,7 +269,7 @@ func readMember(
 		}
 		previous = record.ObjectID
 		placements += len(record.Placements)
-		declared += record.DeclaredBytes
+		declared += ReadBytes(record.DeclaredBytes)
 		records = append(records, record)
 	}
 	after, statErr := file.Stat()

@@ -304,7 +304,83 @@ func TestExactABAPlanReusesSettledContentIdentity(t *testing.T) {
 	assertDirectoriesEqual(t, planA1, planA2)
 }
 
-func TestPlannerRefusesOversizedSelectedBlobBeforeGitRead(t *testing.T) {
+// PHEBS-43: a selected blob over MaxBlobBytes no longer refuses the plan. It
+// stays selected with its real size and placement, contributes no read bytes,
+// and the reader visits it with nil content without ever requesting it.
+func TestPlannerKeepsOversizedSelectedBlobAsUnreadPlacement(t *testing.T) {
+	ctx := t.Context()
+	large := bytes.Repeat([]byte{'x'}, int(MaxBlobBytes)+1)
+	small := []byte("package demo\n\nconst A = 1\n")
+	repository, commit := sourceFixture(t, map[string][]byte{
+		"large.go": large, "copy/large.go": large, "a.go": small,
+	})
+	sourceDirectory := filepath.Join(t.TempDir(), "source")
+	source, err := repositoryindex.BuildSourceGeneration(
+		ctx, repository, sourceDirectory, "example/large",
+		[]store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: commit}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy := Policy{Schema: PolicySchema, Name: "go-source", Version: "1.0.0", IncludeSuffixes: []string{".go"}}
+	var metrics BuildMetrics
+	outputDirectory := t.TempDir()
+	manifest, err := Build(ctx, BuildRequest{
+		SourceDirectory: sourceDirectory, OutputDirectory: outputDirectory,
+		Repository: source.Repository, Source: source, Policy: policy, Metrics: &metrics,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.BlobCount != 2 || manifest.PlacementCount != 3 ||
+		manifest.DeclaredBytes != int64(len(small)) || metrics.OversizedBlobPlacements != 2 {
+		t.Fatalf("manifest = %+v metrics = %+v", manifest, metrics)
+	}
+
+	// Remove the oversized loose object: any request for it would now fail
+	// as missing, so a successful read proves it is never requested.
+	largeID := strings.TrimSpace(runGit(t, repository, "rev-parse", "HEAD:large.go"))
+	if err := os.Remove(filepath.Join(repository, ".git", "objects", largeID[:2], largeID[2:])); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := Open(ctx, outputDirectory, manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var oversized, read int
+	total := ReadStats{}
+	for ordinal := range manifest.Members {
+		stats, err := plan.ReadPartition(ctx, repository, ordinal,
+			func(record BlobRecord, content []byte) error {
+				if record.ObjectID == largeID {
+					oversized++
+					if content != nil || record.DeclaredBytes != MaxBlobBytes+1 ||
+						len(record.Placements) != 2 || !Oversized(record.DeclaredBytes) {
+						t.Fatalf("oversized record = %+v content=%d", record, len(content))
+					}
+					return nil
+				}
+				read++
+				if !bytes.Equal(content, small) {
+					t.Fatalf("small content = %q", content)
+				}
+				return nil
+			})
+		if err != nil {
+			t.Fatal(err)
+		}
+		total.Blobs += stats.Blobs
+		total.Placements += stats.Placements
+		total.BlobBytes += stats.BlobBytes
+	}
+	if oversized != 1 || read != 1 || total.Blobs != 2 || total.Placements != 3 ||
+		total.BlobBytes != int64(len(small)) {
+		t.Fatalf("read oversized=%d read=%d stats=%+v", oversized, read, total)
+	}
+}
+
+// An oversized-only selection is a valid, non-empty plan with zero read bytes.
+func TestPlannerAcceptsOversizedOnlySelection(t *testing.T) {
 	repository, commit := sourceFixture(t, map[string][]byte{
 		"large.go": bytes.Repeat([]byte{'x'}, int(MaxBlobBytes)+1),
 	})
@@ -316,19 +392,20 @@ func TestPlannerRefusesOversizedSelectedBlobBeforeGitRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = Build(t.Context(), BuildRequest{
-		SourceDirectory: sourceDirectory, OutputDirectory: t.TempDir(),
+	outputDirectory := t.TempDir()
+	manifest, err := Build(t.Context(), BuildRequest{
+		SourceDirectory: sourceDirectory, OutputDirectory: outputDirectory,
 		Repository: source.Repository, Source: source,
 		Policy: Policy{Schema: PolicySchema, Name: "go-source", Version: "1.0.0", IncludeSuffixes: []string{".go"}},
 	})
-	if !errors.Is(err, ErrTooLarge) || strings.Contains(err.Error(), "large.go") {
-		t.Fatalf("oversized error = %v", err)
+	if err != nil {
+		t.Fatal(err)
 	}
-	var measurement *pipelinerefusal.Measurement
-	if !errors.As(err, &measurement) || measurement == nil ||
-		measurement.Dimension != pipelinerefusal.DimensionBlobBytes ||
-		measurement.Observed != MaxBlobBytes+1 || measurement.Limit != MaxBlobBytes {
-		t.Fatalf("oversized measurement = %+v", measurement)
+	if manifest.BlobCount != 1 || manifest.DeclaredBytes != 0 || len(manifest.Members) != 1 {
+		t.Fatalf("manifest = %+v", manifest)
+	}
+	if err := ValidateStage(t.Context(), outputDirectory, manifest); err != nil {
+		t.Fatal(err)
 	}
 }
 

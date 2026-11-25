@@ -130,7 +130,7 @@ func (stage *Stage) BuildPartition(
 	writer := bufio.NewWriterSize(io.MultiWriter(file, hasher), 64<<10)
 	var contentBytes int64
 	readStats, err := plan.ReadPartition(ctx, repositoryDirectory, ordinal, func(blob sourcepartition.BlobRecord, content []byte) error {
-		if metrics != nil {
+		if metrics != nil && !sourcepartition.Oversized(blob.DeclaredBytes) {
 			metrics.ReadBlobs++
 		}
 		record, raw, parseErr := stage.observe(ctx, blob, content, metrics)
@@ -186,7 +186,7 @@ func (stage *Stage) validateBuiltPartition(ctx context.Context, ordinal int) err
 	var declared int64
 	for _, record := range records {
 		placements += len(record.Placements)
-		declared += record.DeclaredBytes
+		declared += sourcepartition.ReadBytes(record.DeclaredBytes)
 		if record.State == "observed" {
 			if err := validateObservation(stage.directory, record); err != nil {
 				return err
@@ -202,6 +202,20 @@ func (stage *Stage) validateBuiltPartition(ctx context.Context, ordinal int) err
 }
 
 func (stage *Stage) observe(ctx context.Context, blob sourcepartition.BlobRecord, content []byte, metrics *Metrics) (Record, []byte, error) {
+	if sourcepartition.Oversized(blob.DeclaredBytes) {
+		// PHEBS-43: the partition never read this blob, so there is no
+		// content digest. The record keeps its real size and placements.
+		if content != nil {
+			return Record{}, nil, invalid("oversized blob content")
+		}
+		if metrics != nil {
+			metrics.UnsupportedBlobs++
+		}
+		return Record{
+			Schema: RecordSchema, ObjectID: blob.ObjectID, DeclaredBytes: blob.DeclaredBytes,
+			Placements: blob.Placements, State: "unsupported", Reason: "source_limit",
+		}, nil, nil
+	}
 	contentSum := sha256.Sum256(content)
 	contentDigest := "sha256:" + hex.EncodeToString(contentSum[:])
 	record := Record{

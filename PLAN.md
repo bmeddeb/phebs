@@ -19443,3 +19443,59 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       absolute include.
     - Receipts are in `~/phebs-instance/receipts/phebs42-2026-11-25/` on
       `dave`.
+- **2026-11-25 — PHEBS-43, an oversized source file is a per-file gap (Ben-approved design).**
+  Found during the PHEBS-42 verification. Whole-repository observation
+  refused beltran/gohive outright because one selected file, the 6 MB
+  generated `hive_metastore.go` (root and `v2/`), is over the 4 MiB
+  per-blob bound. Extraction, Caller Map and relationships all wait on the
+  observation, so the repository had no Contract Atlas and no Caller Map.
+  The refusal was also stored as `unknown`.
+  - **Decision (Ben, 2026-11-25: "Per-file gap").** A selected file over
+    `MaxBlobBytes` no longer refuses the plan. It stays selected, with its
+    real size and every placement, and is never read: the partition reader
+    visits it with no content and never requests it from `git cat-file`.
+    Observation records it as one `unsupported` record with the existing
+    reason `source_limit` and no content digest. The rest of the repository
+    is observed, published and served. The bound itself is unchanged; the
+    alternatives (raise it, or keep the refusal) were declined.
+  - **Byte accounting.** An oversized blob contributes zero to member,
+    manifest and super-root byte totals and to every read bound
+    (`ReadBytes`). Any file size becomes a gap, not a refusal; blob and
+    placement counts still apply. A selection made only of oversized files is
+    a valid non-empty plan with zero read bytes.
+  - **Lost reason.** Inventory v2 plans its source partitions inside
+    observation publication, so `validStageDimension` now admits the
+    planning limits (`blob_bytes`, `blob_placements`, `partition_count`,
+    `aggregate_segments`, `generation_blob_bytes`, `planning_spool_bytes`) at
+    `observation_publication`. A planning limit there keeps its
+    `limit`/dimension/observed/limit receipt instead of degrading to
+    `unknown`.
+  - **What a gap means downstream.** Observation consumers (RPC and Kafka
+    postings) already skip `unsupported` records, and the gap is counted in
+    the inventory's `UnsupportedCount` and the receipt's
+    `UnsupportedReasons`. Extraction and Caller Map read file bytes from Git
+    under their own bounds (10 MiB per extraction source, and Caller Map's
+    existing `source_too_large` abstention at 4 MiB), unchanged. A call that
+    binds only through the skipped file abstains; nothing is inferred from
+    its absence.
+  - **Identity and upgrade.** No schema, policy or frozen-bound string
+    changes. A plan with no oversized file is byte-identical to before, so
+    the upgrade re-plans nothing that was already published. Repositories
+    that were refused are planned at their current head on the next
+    schedule. Rollback: an older binary rejects a plan or observation that
+    contains an oversized record as invalid, for that repository only, and
+    refuses it as before.
+  - **Acceptance.** Planner and reader tests: an oversized blob is planned,
+    counted, and visited with nil content after its loose object is deleted
+    (any request would fail as missing). An oversized-only selection
+    validates. An inventory v2 test: the record is `unsupported` /
+    `source_limit` with its size and path, the rest is observed, and a
+    rebuild reuses every member with the same root digest. Record-shape and
+    observation-stage limit tests. Then the gates, and `dave` on the full
+    gohive repository.
+  - **Steady-state cost.** One comparison per selected file while planning
+    and reading, and one fewer `cat-file` request per oversized file. No new
+    I/O, lock, cache, child, timer or schema.
+  - **Release.** Ships as `v0.3.9`. All fourteen pack templates take a patch
+    bump for the rebind; no claim, card, reader version, approval or expiry
+    changes.

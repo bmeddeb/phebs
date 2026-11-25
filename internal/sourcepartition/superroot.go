@@ -150,7 +150,7 @@ func ValidateSuperRoot(root SuperRoot) error {
 	if (root.BlobCount == 0) != (len(root.Segments) == 0) ||
 		(root.BlobCount == 0) != (root.MemberCount == 0) ||
 		(root.BlobCount == 0) != (root.PlacementCount == 0) ||
-		(root.BlobCount == 0) != (root.DeclaredBytes == 0) ||
+		(root.BlobCount == 0 && root.DeclaredBytes != 0) ||
 		(root.BlobCount == 0) != (root.EncodedMemberBytes == 0) {
 		return invalidf("empty super-root shape is inconsistent")
 	}

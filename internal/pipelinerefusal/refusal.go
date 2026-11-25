@@ -447,6 +447,13 @@ func validStageDimension(stage Stage, dimension Dimension) bool {
 		}
 	case StageObservationPublication:
 		switch dimension {
+		// Inventory v2 plans its source partitions inside observation
+		// publication, so the planning limits keep their measurement here
+		// (PHEBS-43) instead of degrading to unknown.
+		case DimensionBlobBytes, DimensionBlobPlacements, DimensionPartitionCount,
+			DimensionAggregateSegments, DimensionGenerationBlobBytes,
+			DimensionPlanningSpoolBytes:
+			return true
 		case DimensionObservationMemberBytes, DimensionGenerationEncodedBytes,
 			DimensionGenerationArtifactBytes, DimensionGenerationControlBytes,
 			DimensionRepositoryGenerations, DimensionRepositoryEntries,

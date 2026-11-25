@@ -544,3 +544,76 @@ func TestInventoryV2RootAdmitsExactRecordMaximumAndRefusesOneOver(t *testing.T) 
 		t.Fatal("one-over root record count was admitted")
 	}
 }
+
+// PHEBS-43: a selected file over the per-blob bound becomes one explicit
+// unsupported source_limit record carrying its real size, and the rest of the
+// repository is observed. The oversized blob is never read.
+func TestInventoryV2RecordsOversizedBlobAsSourceLimitGap(t *testing.T) {
+	large := []byte(strings.Repeat("x", int(sourcepartition.MaxBlobBytes)+1))
+	repository, commit := observationFixture(t, map[string][]byte{
+		"generated/large.go": large,
+		"a.go":               []byte("package demo\nconst A = 1\n"),
+	})
+	largeID := strings.TrimSpace(runObservationGit(t, repository, "rev-parse", "HEAD:generated/large.go"))
+	_, plan, _ := buildInventorySuperPlanV2(t, repository, commit, "example/oversized")
+	output := t.TempDir()
+	var metrics InventoryMetricsV2
+	root, err := BuildInventoryStageV2(t.Context(), InventoryBuildRequestV2{
+		OutputDirectory: output, RepositoryDirectory: repository, Plan: plan, Metrics: &metrics,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root.RecordCount != 2 || root.ObservedCount != 1 || root.UnsupportedCount != 1 || metrics.ReadBlobs != 1 {
+		t.Fatalf("root/metrics = %+v / %+v", root, metrics)
+	}
+	if err := ValidateInventoryStageV2(t.Context(), output, root); err != nil {
+		t.Fatal(err)
+	}
+	keyed, err := OpenInventoryV2Keyed(output, root.Repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, observation, err := keyed.Lookup(t.Context(), largeID)
+	if err != nil || observation != nil || record.State != "unsupported" || record.Reason != "source_limit" ||
+		record.ContentDigest != "" || record.DeclaredBytes != sourcepartition.MaxBlobBytes+1 ||
+		len(record.Placements) != 1 || record.Placements[0].Path != "generated/large.go" {
+		t.Fatalf("oversized lookup = %+v %+v %v", record, observation, err)
+	}
+
+	// A rebuild from the same plan with the first output as prior reuses
+	// every member and reproduces the exact root identity.
+	var again InventoryMetricsV2
+	second, err := BuildInventoryStageV2(t.Context(), InventoryBuildRequestV2{
+		OutputDirectory: t.TempDir(), RepositoryDirectory: repository, Plan: plan,
+		PriorDirectory: output, Metrics: &again,
+	})
+	if err != nil || second.Digest != root.Digest || again.ReadBlobs != 0 {
+		t.Fatalf("rebuild = %+v / %+v / %v", second, again, err)
+	}
+}
+
+func TestValidateRecordOversizedShape(t *testing.T) {
+	placements := []sourcepartition.Placement{{Path: "large.go", Mode: "100644", Revisions: []int{0}}}
+	objectID := strings.Repeat("a", 40)
+	oversized := Record{
+		Schema: RecordSchema, ObjectID: objectID, DeclaredBytes: sourcepartition.MaxBlobBytes + 1,
+		Placements: placements, State: "unsupported", Reason: "source_limit",
+	}
+	if err := validateRecord(oversized); err != nil {
+		t.Fatalf("oversized gap rejected: %v", err)
+	}
+	withDigest := oversized
+	withDigest.ContentDigest = "sha256:" + strings.Repeat("0", 64)
+	otherReason := oversized
+	otherReason.Reason = "parse_error"
+	boundedWithoutDigest := oversized
+	boundedWithoutDigest.DeclaredBytes = sourcepartition.MaxBlobBytes
+	for name, record := range map[string]Record{
+		"digest": withDigest, "reason": otherReason, "bounded without digest": boundedWithoutDigest,
+	} {
+		if err := validateRecord(record); err == nil {
+			t.Fatalf("%s accepted", name)
+		}
+	}
+}

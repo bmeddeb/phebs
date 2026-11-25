@@ -387,7 +387,9 @@ func buildInventoryMemberV2(
 	stats, err := source.plan.ReadPartition(
 		ctx, request.RepositoryDirectory, source.ordinal,
 		func(blob sourcepartition.BlobRecord, content []byte) error {
-			metrics.ReadBlobs++
+			if !sourcepartition.Oversized(blob.DeclaredBytes) {
+				metrics.ReadBlobs++
+			}
 			v1Metrics := &Metrics{}
 			record, _, err := observer.observe(ctx, blob, content, v1Metrics)
 			if err != nil {

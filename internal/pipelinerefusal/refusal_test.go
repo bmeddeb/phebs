@@ -58,6 +58,25 @@ func TestMeasuredLimitIsPromotedOnlyAtBoundary(t *testing.T) {
 	}
 }
 
+// PHEBS-43: inventory v2 plans source partitions inside observation
+// publication, so a planning limit keeps its measurement at that stage.
+func TestObservationStageKeepsSourcePlanningLimits(t *testing.T) {
+	for _, dimension := range []Dimension{
+		DimensionBlobBytes, DimensionBlobPlacements, DimensionPartitionCount,
+		DimensionAggregateSegments, DimensionGenerationBlobBytes, DimensionPlanningSpoolBytes,
+	} {
+		err := At(
+			Measure(errors.New("private"), dimension, 6_051_418, 4<<20),
+			StageObservationPublication, GenerationObservation,
+		)
+		receipt, ok := From(err)
+		if !ok || receipt.Classification != ClassificationLimit || receipt.Dimension != dimension ||
+			receipt.Observed != 6_051_418 || receipt.Limit != 4<<20 {
+			t.Fatalf("%s at observation = %+v, %v", dimension, receipt, ok)
+		}
+	}
+}
+
 func TestAtResealsPrivateOuterWrapperWithoutRelabeling(t *testing.T) {
 	privateCause := errors.New("private object deadbeef")
 	inner := Unknown(

@@ -19,6 +19,8 @@ import (
 
 // ReadPartition validates one bounded plan member and reads every admitted
 // immutable object exactly once through one hardened cat-file --batch child.
+// An oversized blob (see Oversized) is visited with nil content and never
+// requested from the child.
 // Reader-boundary errors identify only the bounded record ordinal; wrapped
 // classifications remain available through errors.Is without rendering a
 // repository path, object id, child stderr, visitor detail, or blob content.
@@ -90,6 +92,18 @@ func (plan *Plan) ReadPartition(
 	for index, record := range records {
 		if err := batchContext.Err(); err != nil {
 			return ReadStats{}, err
+		}
+		if Oversized(record.DeclaredBytes) {
+			// PHEBS-43: an oversized blob is never requested from the batch
+			// child. The visitor receives nil content and records a gap.
+			stats.Blobs++
+			stats.Placements += len(record.Placements)
+			if err := visit(record, nil); err != nil {
+				return ReadStats{}, boundaryError{
+					fmt.Sprintf("consume immutable blob %d failed", index), err,
+				}
+			}
+			continue
 		}
 		if err := dispatchadmission.ObserveProductionSourceRead(batchContext); err != nil {
 			return ReadStats{}, err

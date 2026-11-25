@@ -428,8 +428,16 @@ func readMember(ctx context.Context, directory string, ordinal, count int) (Memb
 
 func validateRecord(value Record) error {
 	if value.Schema != RecordSchema || !gitobj.IsObjectID(value.ObjectID) || value.DeclaredBytes < 0 ||
-		value.DeclaredBytes > sourcepartition.MaxBlobBytes || len(value.Placements) < 1 ||
-		len(value.Placements) > sourcepartition.MaxPlacementsPerPartition || !validDigest(value.ContentDigest) {
+		len(value.Placements) < 1 || len(value.Placements) > sourcepartition.MaxPlacementsPerPartition {
+		return invalid("record identity")
+	}
+	if sourcepartition.Oversized(value.DeclaredBytes) {
+		// PHEBS-43: an oversized blob is never read. It is exactly one
+		// unsupported source_limit gap with no content digest.
+		if value.ContentDigest != "" || value.State != "unsupported" || value.Reason != "source_limit" {
+			return invalid("oversized record")
+		}
+	} else if !validDigest(value.ContentDigest) {
 		return invalid("record identity")
 	}
 	for index, placement := range value.Placements {
