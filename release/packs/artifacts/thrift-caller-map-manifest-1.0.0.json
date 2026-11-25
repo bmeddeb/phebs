@@ -24,6 +24,10 @@
     ],
     "http": "Existing authenticated exact Caller Map, progress and citation routes with protocol=thrift"
   },
+  "required_inputs": [
+    "repository-root generated-from-snapshot.json (t20-generated-from-v1) with one direct generated_path -> declaration_path mapping per generated Thrift file",
+    "the .thrift declaration and the generated Go client committed at the same revision"
+  ],
   "supported_generators": [
     "Apache Thrift compiler (Go)"
   ],

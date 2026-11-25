@@ -21296,7 +21296,8 @@ compatible, and a cadence Thrift field report returns 17 references. See the
 
 *PHEBS-42 (2026-11-25, in progress):* the recipe pack `phebs.thrift.caller.go`
 1.0.0 releases the Thrift Caller Map: Go callers of Apache-Thrift-generated
-clients, attributed through the committed `.thrift` declaration, over the
+clients, attributed through the committed `.thrift` declaration and a committed
+`generated-from-snapshot.json` direct mapping, over the
 existing exact Caller Map routes and caller MCP tools. thriftrw/YARPC clients
 are not resolved, name-matching `thrift-consumer` stays experimental, and
 caller comparison and operation Impact stay protobuf-only. See the 2026-11-25

@@ -19355,7 +19355,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     experimental Thrift caller publications are fenced and replaced through
     startup reconciliation.
   - **Scope.** Go callers of Apache-Thrift-compiler-generated clients,
-    attributed through the repository-committed `.thrift` declaration, over the
+    attributed through the repository-committed `.thrift` declaration and one
+    direct mapping in the committed `generated-from-snapshot.json` (Thrift
+    needs a direct relation; without it a call abstains), over the
     existing exact Caller Map, progress and citation routes, the two caller MCP
     tools and `contract-caller-map`. thriftrw, YARPC, Kitex and fbthrift clients
     are not resolved. Name-matching `thrift-consumer` stays experimental (T58

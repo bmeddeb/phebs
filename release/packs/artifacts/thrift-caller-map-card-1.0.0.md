@@ -14,9 +14,15 @@ A resolved row needs all of the following:
 
 - a call to one generated client method (the generated file carries the
   Thrift compiler header and the method's `Call` wire literal);
-- one generated-from relation from that file to a `thrift-contract`
-  declaration;
-- that declaration's operation, which supplies the declaration lineage.
+- exactly one direct `generated_path` → `declaration_path` mapping for that
+  generated file in the repository-root `generated-from-snapshot.json`
+  (version `t20-generated-from-v1`), committed at the same revision. phebs
+  never infers this relation from paths, layout or the generator header;
+- that declaration's `thrift-contract` operation, which supplies the
+  declaration lineage.
+
+Without that committed mapping a call is an explicit abstention, never a
+resolved caller.
 
 The surfaces are those of the protobuf Caller Map, for `protocol=thrift`:
 
