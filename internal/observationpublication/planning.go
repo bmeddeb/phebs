@@ -53,7 +53,7 @@ func (runtime *Runtime) EnqueuePlanning(
 	ctx context.Context, repository string,
 ) (PlanningEnqueue, error) {
 	if runtime != nil && runtime.InventoryV2 {
-		return runtime.enqueueInventoryV2(ctx, repository)
+		return runtime.enqueueInventoryV2(ctx, repository, false)
 	}
 	if err := runtime.validatePlanningRuntime(repository); err != nil {
 		return "", planningFailure(err)
@@ -152,7 +152,7 @@ func (runtime *Runtime) HandlePlanning(ctx context.Context, chunk store.Generati
 		// cutover. Establish v2 ownership from the same current source, then let
 		// the scheduler settle the obsolete v1 row without opening a source
 		// member, Git object, or v1 census stage.
-		if _, err := runtime.enqueueInventoryV2(ctx, chunk.Repository); err != nil {
+		if _, err := runtime.enqueueInventoryV2(ctx, chunk.Repository, false); err != nil {
 			return planningFailure(err)
 		}
 		return nil

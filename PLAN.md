@@ -19504,3 +19504,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   - **Release.** Ships as `v0.3.9`. All fourteen pack templates take a patch
     bump for the rebind; no claim, card, reader version, approval or expiry
     changes.
+
+- **2026-11-25 — PHEBS-43 follow-up, a refusal with no known reason is retried once per service start.**
+  - **Finding.** On `dave`, `v0.3.9` left the full gohive repository refused.
+    A same-target inventory schedule that settled failed is terminal: it is
+    planned again only when the target (repository, source generation,
+    partition policy) changes. PHEBS-43 changed none of them, so a repository
+    refused for an oversized file healed only on its next commit. The
+    "Identity and upgrade" sub-bullet above, and the `v0.3.9` notes, said it
+    would be planned again at its current head; that was wrong.
+  - **Decision.** The service-start recovery pass mints one recovery schedule
+    for a same-target failed inventory schedule whose final failure has no
+    durable refusal or is classified `unknown`. Such a failure is not known
+    to be deterministic for the running binary; every pre-PHEBS-43 oversized
+    refusal is stored that way. A typed refusal (`limit`, `invalid`) stays
+    terminal, and index-chained planning is unchanged, so a repository that
+    keeps failing is tried at most once per start, never on every sync.
+    Rejected: bumping the planning policy version, which re-plans every
+    published repository.
+  - **Acceptance.** A table test over no refusal, `unknown`, `limit` and
+    `invalid`: index-chained planning never reads the failure and stays
+    failed; startup retries only the first two, once, and a second start
+    finds the recovery active. Then the gates, and `dave` on full gohive.
+  - **Steady-state cost.** At service start only, one final-failure read per
+    repository whose current inventory schedule settled failed, and one
+    whole-repository plan per such repository with an untyped failure. No
+    sync-path, schema or timer change.
+  - **Release.** Ships as `v0.3.10`, with a patch bump of all fourteen pack
+    templates; no claim, card, reader version, approval or expiry changes.

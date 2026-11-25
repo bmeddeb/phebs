@@ -29,7 +29,7 @@ var inventoryRuntimeStripes [64]sync.Mutex
 // publication: v1 remains historical authority, while the current source and
 // the v2 schedule/pointer are the complete cutover fence.
 func (runtime *Runtime) enqueueInventoryV2(
-	ctx context.Context, repository string,
+	ctx context.Context, repository string, retryUntypedFailure bool,
 ) (PlanningEnqueue, error) {
 	if runtime == nil || !runtime.InventoryV2 || runtime.Store == nil ||
 		!filepath.IsAbs(runtime.DataDir) || validateRepository(repository) != nil {
@@ -74,7 +74,17 @@ func (runtime *Runtime) enqueueInventoryV2(
 		case current.Status == store.GenerationScheduleActive:
 			return PlanningActive, nil
 		case current.Status == store.GenerationScheduleSettled && current.Failed > 0:
-			return PlanningFailed, nil
+			if !retryUntypedFailure {
+				return PlanningFailed, nil
+			}
+			typed, typedErr := runtime.inventoryFailureTypedV2(ctx, repository, *current)
+			if typedErr != nil {
+				return "", planningFailure(typedErr)
+			}
+			if typed {
+				return PlanningFailed, nil
+			}
+			// An untyped final failure falls through to one recovery schedule.
 		case current.Status == store.GenerationScheduleSettled:
 			// A completed worker may have crossed its final filesystem rename but
 			// lost the store completion response. Recheck current authority before
@@ -363,4 +373,45 @@ func (runtime *Runtime) inventoryV2PriorDirectories(root, repository string) (st
 	directory := inventoryGenerationDirectoryV2(root, repository, current.Current.GenerationDigest)
 	return filepath.Join(directory, InventoryPublicationSourceNameV2),
 		filepath.Join(directory, InventoryPublicationInventoryNameV2)
+}
+
+// EnqueuePlanningStartup is EnqueuePlanning for the service-start recovery
+// pass. A same-target inventory schedule that settled failed stays terminal
+// when its final failure is a typed refusal (limit or invalid), because this
+// binary would refuse it again. A final failure with no durable refusal, or
+// one classified unknown, is not known to be deterministic for this binary,
+// so each service start mints one recovery schedule for it. Before PHEBS-43
+// an oversized source file was stored as an unknown refusal; this is how a
+// repository refused that way is planned again at an unchanged head.
+func (runtime *Runtime) EnqueuePlanningStartup(
+	ctx context.Context, repository string,
+) (PlanningEnqueue, error) {
+	if runtime != nil && runtime.InventoryV2 {
+		return runtime.enqueueInventoryV2(ctx, repository, true)
+	}
+	return runtime.EnqueuePlanning(ctx, repository)
+}
+
+// inventoryFailureTypedV2 reports whether the exact settled schedule's final
+// failure is a typed refusal. A store without the failure projection keeps
+// every failure terminal.
+func (runtime *Runtime) inventoryFailureTypedV2(
+	ctx context.Context, repository string, schedule store.GenerationSchedule,
+) (bool, error) {
+	failures, ok := runtime.Store.(ProgressFailureStore)
+	if !ok {
+		return true, nil
+	}
+	failure, err := failures.GetGenerationScheduleFailure(
+		ctx, repository, InventoryScheduleStageV2, schedule.Digest,
+	)
+	if err != nil {
+		return false, err
+	}
+	if failure == nil || failure.ScheduleDigest != schedule.Digest ||
+		failure.Generation != schedule.Generation {
+		return false, invalid("inventory v2 terminal failure")
+	}
+	return failure.Refusal != nil &&
+		failure.Refusal.Classification != pipelinerefusal.ClassificationUnknown, nil
 }

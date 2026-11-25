@@ -100,9 +100,14 @@ func (state *planningOwnershipStore) HeartbeatGenerationChunk(
 
 func (state *planningOwnershipStore) settlePlanningFailure(t *testing.T) {
 	t.Helper()
+	state.settleStageFailure(t, PlanningScheduleStage)
+}
+
+func (state *planningOwnershipStore) settleStageFailure(t *testing.T, stage string) {
+	t.Helper()
 	state.mu.Lock()
 	defer state.mu.Unlock()
-	schedule := state.current[PlanningScheduleStage]
+	schedule := state.current[stage]
 	if schedule == nil {
 		t.Fatal("planning schedule is absent")
 	}
@@ -1500,4 +1505,87 @@ func planningEntryNames(t *testing.T, runtime *Runtime, repository string) []str
 		names = append(names, entry.Name())
 	}
 	return names
+}
+
+// failureProjectionStore adds the exact final-failure projection the
+// production store serves for a settled failed schedule.
+type failureProjectionStore struct {
+	*planningOwnershipStore
+	refusal *pipelinerefusal.Receipt
+	reads   int
+}
+
+func (state *failureProjectionStore) GetGenerationScheduleFailure(
+	ctx context.Context, repository, stage, scheduleDigest string,
+) (*store.GenerationScheduleFailure, error) {
+	state.reads++
+	schedule, err := state.GetGenerationSchedule(ctx, repository, stage)
+	if err != nil {
+		return nil, err
+	}
+	if schedule.Digest != scheduleDigest || schedule.Status != store.GenerationScheduleSettled ||
+		schedule.Failed < 1 {
+		return nil, store.ErrGenerationStale
+	}
+	return &store.GenerationScheduleFailure{
+		ScheduleDigest: schedule.Digest, Generation: schedule.Generation,
+		Refusal: state.refusal,
+	}, nil
+}
+
+func TestInventoryV2StartupRetriesOnlyUntypedFailure(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		refusal *pipelinerefusal.Receipt
+		retry   bool
+	}{
+		{name: "no_durable_refusal", retry: true},
+		{name: "unknown", refusal: &pipelinerefusal.Receipt{Classification: pipelinerefusal.ClassificationUnknown}, retry: true},
+		{name: "limit", refusal: &pipelinerefusal.Receipt{Classification: pipelinerefusal.ClassificationLimit}},
+		{name: "invalid", refusal: &pipelinerefusal.Receipt{Classification: pipelinerefusal.ClassificationInvalid}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			dataDirectory, repositoryDirectory, repository, commit := planningOwnershipFixture(t)
+			publishPlanningOwnershipSource(t, dataDirectory, repositoryDirectory, repository, commit)
+			base := &planningOwnershipStore{}
+			state := &failureProjectionStore{planningOwnershipStore: base, refusal: test.refusal}
+			runtime := &Runtime{
+				DataDir: dataDirectory, Store: state, Cache: &Cache{}, InventoryV2: true,
+				AcquireTransition: noopPlanningTransition,
+			}
+			if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+				disposition != PlanningEnqueued {
+				t.Fatalf("first enqueue = %q, %v", disposition, err)
+			}
+			base.settleStageFailure(t, InventoryScheduleStageV2)
+
+			// Index-chained planning keeps every same-target failure terminal
+			// and never reads the failure projection.
+			if disposition, err := runtime.EnqueuePlanning(t.Context(), repository); err != nil ||
+				disposition != PlanningFailed || state.reads != 0 ||
+				len(base.specsFor(InventoryScheduleStageV2)) != 1 {
+				t.Fatalf("index-chained enqueue after failure = %q, %v, reads=%d", disposition, err, state.reads)
+			}
+
+			disposition, err := runtime.EnqueuePlanningStartup(t.Context(), repository)
+			specs := base.specsFor(InventoryScheduleStageV2)
+			if !test.retry {
+				if err != nil || disposition != PlanningFailed || len(specs) != 1 || state.reads != 1 {
+					t.Fatalf("startup after typed failure = %q, %v, specs=%d reads=%d",
+						disposition, err, len(specs), state.reads)
+				}
+				return
+			}
+			if err != nil || disposition != PlanningEnqueued || len(specs) != 2 ||
+				specs[1].Generation == specs[0].Generation || state.reads != 1 {
+				t.Fatalf("startup after untyped failure = %q, %v, specs=%+v reads=%d",
+					disposition, err, specs, state.reads)
+			}
+			// The recovery owns the target: a second start does not mint another.
+			if again, err := runtime.EnqueuePlanningStartup(t.Context(), repository); err != nil ||
+				again != PlanningActive || len(base.specsFor(InventoryScheduleStageV2)) != 2 {
+				t.Fatalf("second startup = %q, %v", again, err)
+			}
+		})
+	}
 }

@@ -507,7 +507,7 @@ func startServeObservationSchedulers(d *serveDeps) error {
 		return fmt.Errorf("list repositories for observation recovery: %w", listErr)
 	} else {
 		summary, recoveryErr := enqueueObservationPlanningStartup(
-			ctx, repositories, d.observationRuntime.EnqueuePlanning,
+			ctx, repositories, d.observationRuntime.EnqueuePlanningStartup,
 		)
 		if recoveryErr != nil {
 			return recoveryErr
