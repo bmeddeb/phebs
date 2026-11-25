@@ -88,6 +88,13 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-25, `9b73e548`) releases the Thrift Caller Map as
     `phebs.thrift.caller.go` (PHEBS-42), verified on `dave` against
     beltran/gohive.
+    [`v0.3.9`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.9)
+    (2026-11-25, `9b587602`) makes a selected file over the 4 MiB per-blob
+    bound a per-file `source_limit` gap instead of refusing its repository,
+    and [`v0.3.10`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.10)
+    (2026-11-25, `be219529`) re-plans, once per start, a repository an older
+    release refused for that reason (PHEBS-43), verified on `dave` against
+    the full gohive repository.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -19532,3 +19539,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     sync-path, schema or timer change.
   - **Release.** Ships as `v0.3.10`, with a patch bump of all fourteen pack
     templates; no claim, card, reader version, approval or expiry changes.
+  - **Verified (2026-11-25).** `v0.3.9` was published from `9b587602` and
+    installed on `dave`; none of the ten published repositories was
+    re-planned, and full gohive stayed refused (the finding above). The
+    `v0.3.9` release notes carry a dated correction. `v0.3.10` was published
+    from `be219529` (runtime sha256 `8a16fa77…`) and installed on `dave` from
+    the downloaded archive with an unchanged config.
+    - The start-up pass logged `current=10 failed=0 enqueued=1`: only gohive
+      was planned again.
+    - Full gohive at `4f4ac78a` is current: 37 records, 35 observed and 2
+      `unsupported` with `source_limit` (the two 6.05 MB
+      `hive_metastore.go` files).
+    - Its Thrift Contract Atlas lists `HiveServer.TCLIService` (46
+      operations over both lineages) and `fb303.FacebookService` (26); it
+      listed none before.
+    - Its Caller Map returns 16 `resolved_caller` rows over eight
+      TCLIService operations and 8 `extractor_abstention` rows on
+      `GetColumns`, the same callers as the bounded copy.
+    - The other repositories kept their generations, except two that moved
+      to new upstream commits through ordinary sync. The three MED-513 gRPC
+      caller rows still resolve. Every job succeeded and there was no panic.
+    - Per-file records, which carry the declared size, are not served by
+      any API; the size is covered by unit tests.
+    - Receipts are in `~/phebs-instance/receipts/phebs43-2026-11-25/` on
+      `dave`.
