@@ -1,0 +1,115 @@
+{
+  "schema": "phebs-final-release-validation-v1",
+  "pack_id": "phebs.protobuf.change-impact",
+  "pack_claim_version": "1.0.0",
+  "source_commit": "4edfae479dd3072093ddb2b22eef9fab1ffdb818",
+  "binary_digest": "sha256:24c24e7ce5cb9047c26c4056ab31052fb3d60f07ce7071031e2e82f1ad9c57b9",
+  "binary_digest_scope": "go build -trimpath ./cmd/phebs at source_commit on the test host; the released runtime is bound separately by its signed record.",
+  "qualification_artifact_id": null,
+  "composed_claims": {
+    "phebs.protobuf.wire.buf": "wire-buf-validation-1.0.2.json",
+    "phebs.protobuf.field.go": "qualified-protobuf-fields-validation-1.0.0.json"
+  },
+  "historical_measurement_scope": "This composed claim adds no extraction, evidence domain or measurement. Verdict and reference quality are inherited unchanged from the two composed claims' artifacts.",
+  "current_checks": [
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./cmd/phebs",
+        "-count=1",
+        "-timeout=180s",
+        "-run",
+        "^Test(ChangeImpact.*|OperationImpactReleasedAdmission|ReleasedProtobufFieldRegistration|ReleasedThriftFieldRegistration|CallerMapReleased.*|ReleaseLoadBindingsForDerivesEveryField|SignReleaseDerivesBindingsAndSelfVerifies|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix)$"
+      ],
+      "pid": 3734071,
+      "actual_wait": 0,
+      "seconds": 3.1936259269714355,
+      "tests_passed": 81,
+      "tests_skipped": 0,
+      "log_sha256": "444ff8f353656265a7e13809b26ef8098a492412abd607ff7e0195f60648c8df"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./internal/api",
+        "-count=1",
+        "-timeout=120s",
+        "-run",
+        "^Test(ReleasedChangeImpact.*|ContractChangeImpactReport.*|.*Compatibility.*|.*ImpactReport.*|ReleasedField.*)$"
+      ],
+      "pid": 3734206,
+      "actual_wait": 0,
+      "seconds": 1.3972229957580566,
+      "tests_passed": 31,
+      "tests_skipped": 0,
+      "log_sha256": "3671d2b9227d1b82a89ceabc08e935fc58de433229bf817ff03d64a0f83554ee"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./internal/mcp",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "pid": 3734279,
+      "actual_wait": 0,
+      "seconds": 2.24564790725708,
+      "tests_passed": 108,
+      "tests_skipped": 0,
+      "log_sha256": "3f96c0de4f944ee5df095f4e1a2c0f66088a3f5418c918cd89f7eb190dff968a"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./internal/packrelease",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "pid": 3734447,
+      "actual_wait": 0,
+      "seconds": 0.3616013526916504,
+      "tests_passed": 106,
+      "tests_skipped": 0,
+      "log_sha256": "341873e7973679dbfbb85c8ca55ffe1632420da121b4bb06a08f10b22139ec53"
+    },
+    {
+      "command": [
+        "(cd ui &&",
+        "npx",
+        "vitest",
+        "run",
+        "src/pages/ImpactPage.test.tsx",
+        "--reporter=json",
+        ")"
+      ],
+      "pid": 3735692,
+      "actual_wait": 0,
+      "seconds": 2.825117349624634,
+      "tests_passed": 17,
+      "tests_skipped": 0,
+      "log_sha256": "d983df5868fe47e46a073a82ef9313c85dcecfae70e8dfb39116fa997846a9b8"
+    }
+  ],
+  "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
+  "review": {
+    "source": "PHEBS-41 admits a released proof surface only beside the released Buf WIRE claim with a started checker and released scip-proto-field, with no provisional switch. Admission matrix covers dark, claim alone, each missing dependency, Thrift-only fields, joint, revocation, suspension, expiry and the provisional switches; an unsupported claim version refuses startup.",
+    "evidence": "admitProofQuery admits check_contract_compatibility only over scip-proto-field and contract_impact_field only over the released field domains, on build and on every saved-bundle read. Declaration-lineage identities are refused.",
+    "security": "Existing authenticated visibility/source/generation/citation fences, signed binary/artifact bindings and identity checks retained. The operation entry answers 503 and names /api/operation_impact_report; grpc-consumer and thrift-consumer are never read under the released claim.",
+    "steady_state_cost": "Startup adds one map lookup per dependency and one claim-version check. Requests reuse the existing Buf checker, bounded proof builder and bundle store. No new worker, cache, lock, child, timer, index or schema; a dark install registers nothing new."
+  },
+  "not_established": [
+    "New compatibility or reference accuracy beyond the composed claims",
+    "Completeness: an absent reference is not proven absent",
+    "Runtime or deployment usage",
+    "Linux capacity, scale or latency/throughput SLO"
+  ],
+  "expires_at": "2027-01-10T23:59:59Z"
+}
