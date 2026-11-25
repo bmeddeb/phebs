@@ -22,7 +22,10 @@ func TestObserveCapacityUsesActualPrivateDescriptorWithoutGrowth(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Free counts move with every other writer on a shared filesystem, so
-	// compare inside a window where two direct reads agree.
+	// compare inside a window where two direct reads agree and the
+	// observation between them agrees too. Equal bracketing reads alone can
+	// hide a create/delete pair (A-B-A) during the observation; an incorrect
+	// observation never matches in any window, so this keeps the assertion.
 	var observed CapacityObservation
 	var actual unix.Statfs_t
 	quiet := false
@@ -38,18 +41,15 @@ func TestObserveCapacityUsesActualPrivateDescriptorWithoutGrowth(t *testing.T) {
 		if err = unix.Statfs(base, &actual); err != nil {
 			t.Fatal(err)
 		}
-		if quiet = first == actual; quiet {
+		if quiet = first == actual && capacityMatches(observed, before, actual); quiet {
 			break
 		}
 	}
 	if !quiet {
-		t.Fatal("filesystem free counts never held still across one observation")
+		t.Fatalf("observation never matched actual kernel state in a quiet window: %+v %+v", observed, actual)
 	}
 	if err := unix.Stat(base, &after); err != nil {
 		t.Fatal(err)
-	}
-	if observed.Device != uint64(before.Dev) || observed.Inode != before.Ino || observed.BlockSize != uint64(actual.Bsize) || observed.TotalBytes != actual.Blocks*uint64(actual.Bsize) || observed.FreeBytes != actual.Bfree*uint64(actual.Bsize) || observed.AvailableBytes != actual.Bavail*uint64(actual.Bsize) || observed.TotalInodes != actual.Files || observed.FreeInodes != actual.Ffree {
-		t.Fatalf("observation differs from actual kernel state: %+v %+v", observed, actual)
 	}
 	entries, err := os.ReadDir(base)
 	if err != nil {
@@ -116,4 +116,10 @@ func TestObserveCapacityRefusesChangedOrUntrustedRoot(t *testing.T) {
 	if _, err := ObserveCapacity(nil, target); err == nil {
 		t.Fatal("nil context observed")
 	}
+}
+
+func capacityMatches(observed CapacityObservation, dir unix.Stat_t, actual unix.Statfs_t) bool {
+	return observed.Device == uint64(dir.Dev) && observed.Inode == dir.Ino && observed.BlockSize == uint64(actual.Bsize) &&
+		observed.TotalBytes == actual.Blocks*uint64(actual.Bsize) && observed.FreeBytes == actual.Bfree*uint64(actual.Bsize) &&
+		observed.AvailableBytes == actual.Bavail*uint64(actual.Bsize) && observed.TotalInodes == actual.Files && observed.FreeInodes == actual.Ffree
 }
