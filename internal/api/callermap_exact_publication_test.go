@@ -43,9 +43,9 @@ const (
 // fixture. The publication, reader and service path is shared, so a Thrift
 // row proves the same exact path a protobuf row does.
 type exactCallerProtocol struct {
-	protocol, detailProtocol, callerDomain, declarationDomain string
+	protocol, detailProtocol, callerDomain, declarationDomain  string
 	resolverPack, idlPath, idlBody, operation, operationSchema string
-	adapter                                                   sdk.Extractor
+	adapter                                                    sdk.Extractor
 }
 
 var protobufExactCaller = exactCallerProtocol{
