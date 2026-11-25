@@ -121,6 +121,23 @@ func TestStrictDecodeRejectsUnknownFieldsAndPositiveClaims(t *testing.T) {
 	}
 }
 
+// supersededGates maps a gate named by the retained receipt to the production
+// test that owns the same property after a later, recorded behaviour change.
+// The retained receipt keeps its bytes; only this live existence check follows.
+var supersededGates = map[string]string{
+	// PHEBS-43 (2026-11-25): an oversized selected blob is no longer a
+	// whole-repository refusal but an unread per-file gap. The successor still
+	// proves its bytes are never read from Git (the object is deleted first).
+	"internal/sourcepartition.TestPlannerRefusesOversizedSelectedBlobBeforeGitRead": "internal/sourcepartition.TestPlannerKeepsOversizedSelectedBlobAsUnreadPlacement",
+}
+
+func testExists(t *testing.T, qualified string) bool {
+	t.Helper()
+	separator := strings.LastIndexByte(qualified, '.')
+	packagePath, testName := qualified[:separator], qualified[separator+1:]
+	return testFunctionExists(t, filepath.Join(repositoryRoot(t), filepath.FromSlash(packagePath)), testName)
+}
+
 func TestNamedProductionGatesExist(t *testing.T) {
 	receipt, err := Build(repositoryRoot(t))
 	if err != nil {
@@ -132,8 +149,13 @@ func TestNamedProductionGatesExist(t *testing.T) {
 			if separator < 1 || separator == len(qualified)-1 {
 				t.Fatalf("case %q has invalid test identity %q", gate.Name, qualified)
 			}
-			packagePath, testName := qualified[:separator], qualified[separator+1:]
-			if !testFunctionExists(t, filepath.Join(repositoryRoot(t), filepath.FromSlash(packagePath)), testName) {
+			if successor, ok := supersededGates[qualified]; ok {
+				if testExists(t, qualified) {
+					t.Fatalf("case %q gate %s is still present; drop its supersession", gate.Name, qualified)
+				}
+				qualified = successor
+			}
+			if !testExists(t, qualified) {
 				t.Fatalf("case %q names missing test %s", gate.Name, qualified)
 			}
 		}

@@ -19493,6 +19493,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     rebuild reuses every member with the same root digest. Record-shape and
     observation-stage limit tests. Then the gates, and `dave` on the full
     gohive repository.
+  - **Retained T39.3 gate name.** The T39.3 receipt names the retired
+    `TestPlannerRefusesOversizedSelectedBlobBeforeGitRead`. Its bytes are not
+    reopened: its live existence check maps that name to
+    `TestPlannerKeepsOversizedSelectedBlobAsUnreadPlacement`, which still
+    proves the blob is never read from Git, as T30.6m did on 2026-09-13.
   - **Steady-state cost.** One comparison per selected file while planning
     and reading, and one fewer `cat-file` request per oversized file. No new
     I/O, lock, cache, child, timer or schema.

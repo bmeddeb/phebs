@@ -61,6 +61,15 @@ and negative claims. It contains no repository identity, service name, source
 path or bytes, query text, object ID, credential, host, raw error, private
 topology, or target measurement.
 
+The retained receipt and its gate names are historical authority. When a
+later, recorded behaviour change retires a named test, the receipt keeps its
+bytes and `TestNamedProductionGatesExist` follows a supersession entry to the
+successor test instead. PHEBS-43 (2026-11-25) made an oversized selected blob
+an unread per-file gap rather than a whole-repository refusal, so
+`TestPlannerRefusesOversizedSelectedBlobBeforeGitRead` is superseded by
+`TestPlannerKeepsOversizedSelectedBlobAsUnreadPlacement`, which still proves the
+blob's bytes are never read from Git.
+
 T39.3 establishes neither comprehensive security nor a general SLO, accuracy,
 release, migration-complete, or decommission-safe claim. `GATE2-V2` remains
 `NOT_ESTABLISHED`.
