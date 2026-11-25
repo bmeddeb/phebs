@@ -1,0 +1,36 @@
+{
+  "schema": "phebs-composed-claim-manifest-v1",
+  "pack_id": "phebs.protobuf.change-impact",
+  "pack_claim_version": "1.0.0",
+  "distribution": "default-on-package",
+  "owner": "Ben Meddeb",
+  "ticket": "PHEBS-41",
+  "composes": [
+    "phebs.protobuf.wire.buf",
+    "phebs.protobuf.field.go"
+  ],
+  "optional_field_planes": [
+    "phebs.thrift.field.apache",
+    "phebs.thrift.field.thriftrw"
+  ],
+  "surfaces": [
+    "POST /api/check_contract_compatibility",
+    "MCP check_contract_compatibility",
+    "GET /api/contract_impact_report (field identity)",
+    "POST /api/contract_impact_report (proposed change)",
+    "GET /api/contract_impact_reports/{id}"
+  ],
+  "capabilities": [
+    "contract-compatibility",
+    "contract-impact-change"
+  ],
+  "excluded": [
+    "contract_impact_report operation entry",
+    "grpc-consumer",
+    "thrift-consumer",
+    "find_operation_consumers",
+    "get_extraction_coverage"
+  ],
+  "scope_change": "Composition of two released claims only; no extraction, evidence domain or measurement is added.",
+  "expiry": "2027-01-10T23:59:59Z"
+}

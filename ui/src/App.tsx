@@ -116,7 +116,8 @@ export default function App() {
 
   const legacyImpactAvailable = currentCapabilities.includes('contract-impact-report')
   const operationImpactAvailable = currentCapabilities.includes('contract-impact-operation')
-  const impactAvailable = legacyImpactAvailable || operationImpactAvailable
+  const changeImpactAvailable = currentCapabilities.includes('contract-impact-change')
+  const impactAvailable = legacyImpactAvailable || operationImpactAvailable || changeImpactAvailable
   const contractsAvailable = currentCapabilities.includes('contract-atlas')
   const callerMapAvailable = currentCapabilities.includes('contract-caller-map')
   const callerComparisonAvailable = currentCapabilities.includes('contract-caller-comparison')

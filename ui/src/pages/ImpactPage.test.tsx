@@ -303,3 +303,17 @@ test('manual validation on a saved URL never offers a retry of the preceding bun
   expect(screen.queryByText(report.conclusion.text)).toBeNull()
   expect(api.fetchSavedImpact).toHaveBeenCalledTimes(1)
 })
+
+test('released change impact serves field and change tabs without an operation entry', async () => {
+  page(new URLSearchParams(), true, ['contract-impact-operation', 'contract-impact-change', 'contract-compatibility'])
+  expect(screen.queryByRole('tab', { name: 'Operation' })).toBeNull()
+  expect(screen.queryByLabelText('Canonical operation')).toBeNull()
+  expect(screen.getByRole('tab', { name: 'Field' }).getAttribute('aria-selected')).toBe('true')
+  expect(screen.getByRole('tab', { name: 'Contract change' })).toBeTruthy()
+  fireEvent.change(screen.getByLabelText('Contract lineage'), { target: { value: 'lineage-cart' } })
+  fireEvent.change(screen.getByLabelText('Message full name'), { target: { value: 'shop.Cart' } })
+  fireEvent.change(screen.getByLabelText('Field number'), { target: { value: '7' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+  await waitFor(() => expect(api.fetchFieldImpact).toHaveBeenCalledWith('lineage-cart', 'shop.Cart', 7, expect.any(AbortSignal)))
+  expect(api.fetchOperationImpact).not.toHaveBeenCalled()
+})

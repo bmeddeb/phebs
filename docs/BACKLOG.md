@@ -21281,6 +21281,14 @@ ran in 229.8 s against the 300 s shared wall. See the 2026-11-24 MED-505 ADR in
 `PLAN.md` and `spike/t457/med505_amd64_admission_v3.json`. Receipts are in
 `~/phebs-instance/receipts/med505-2026-11-24/` on `dave`.
 
+*PHEBS-41 (2026-11-25, in progress):* the composed claim
+`phebs.protobuf.change-impact` 1.0.0 releases proof-enriched compatibility and
+the field and proposed-change Contract Impact reports. They are built only from
+the released Buf WIRE verdict and released field references, and are admitted
+only beside both. The operation entry stays on the released operation impact
+report, and name-matching consumer evidence stays experimental. See the
+2026-11-25 PHEBS-41 ADR in `PLAN.md`.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

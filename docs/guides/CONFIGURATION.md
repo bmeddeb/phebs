@@ -1658,6 +1658,37 @@ for endpoint identity, paging, citation and uncertainty behavior. Production
 activation/signature and the independent composed quality/operating gates
 remain separate from this registration implementation.
 
+### Change Impact release selection (PHEBS-41)
+
+The composed change-impact claim `phebs.protobuf.change-impact`, claim version
+1.0.0, is bound to
+`build_contract_change_impact@contract-impact-report-v2+buf-<version>-<policy>`.
+It is admitted only when all of these hold:
+
+- the released Buf WIRE claim `phebs.protobuf.wire.buf` is selected, and its
+  checker started;
+- the released protobuf field recipe `phebs.protobuf.field.go` is selected;
+- no provisional extraction switch is on.
+
+It then serves:
+
+- `POST /api/check_contract_compatibility` and the MCP
+  `check_contract_compatibility` tool (capability `contract-compatibility`);
+- field and proposed-change Contract Impact reports (`GET` and
+  `POST /api/contract_impact_report`) and saved report reads (capability
+  `contract-impact-change`).
+
+Field reports also read released Thrift field references when a Thrift field
+recipe is selected. The operation entry of `/api/contract_impact_report` answers
+503 and names `/api/operation_impact_report`. Name-matching consumer evidence
+is never served.
+
+A missing, expired, revoked or suspended claim or dependency keeps these routes,
+the tool and both capabilities absent. The release package ships this claim
+on by default; `package_default: off` keeps it dark with the rest. With a
+provisional switch on, the experimental proof surface serves these routes
+instead.
+
 ### Independent committed Thrift field recipes (T52.3)
 
 The signed release-selection registry has independent

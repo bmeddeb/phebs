@@ -281,6 +281,25 @@ func releasedOperationImpact(d *serveDeps) bool {
 	return false
 }
 
+// releasedChangeImpact admits the PHEBS-41 composed claim only beside the two
+// released planes it composes: the Buf WIRE claim with a started checker and
+// released scip-proto-field. The provisional switches never substitute; they
+// keep the experimental proof surface, which already serves these routes.
+func releasedChangeImpact(d *serveDeps) bool {
+	if !d.releasedClaims[changeImpactPackID] {
+		return false
+	}
+	if provisionalExtractionOn(d.cfg) {
+		log.Printf("release selection: %s withdrawn: provisional extraction keeps the experimental proof surface", changeImpactPackID)
+		return false
+	}
+	if !d.releasedClaims[wireCompatibilityPackID] || !d.releasedDomains["scip-proto-field"] || d.compatibility == nil {
+		log.Printf("release selection: %s withdrawn: change Impact needs the released Buf WIRE claim with a started checker and released protobuf field references", changeImpactPackID)
+		return false
+	}
+	return true
+}
+
 // admittedWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
 // under the same dark switches as the proof-enriched check, or ordinarily when
 // a verified released record selects its claim (T53.3). A released claim never
@@ -344,6 +363,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		KafkaReleasedPlanes:             releasedKafkaPlanes(cfg, d.releasedDomains),
 		ProtobufFieldReferencesReleased: !provisionalExtractionOn(cfg) && d.releasedDomains["scip-proto-field"],
 		ThriftFieldReferencesReleased:   !provisionalExtractionOn(cfg) && d.releasedDomains["scip-thrift-field"],
+		ChangeImpactReleased:            releasedChangeImpact(d),
 		EvidenceExtractorVersions:       releasedEvidenceVersions(d),
 		KafkaTopicInventoryReleased: releasedKafkaTopics(
 			d.releasedClaims, releasedKafkaPlanes(cfg, d.releasedDomains)),
@@ -489,7 +509,10 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 	var mcpTopicInventory phebsmcp.TopicInventoryQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
 		mcpProofs = proofService
-		if proofService.CompatibilityAvailable() && !apiOpts.ProtobufFieldReferencesReleased && !apiOpts.ThriftFieldReferencesReleased && len(apiOpts.KafkaReleasedPlanes) == 0 {
+		// CompatibilityAvailable is true only on the experimental surface or
+		// under the released change-impact claim (PHEBS-41), exactly the
+		// boundary the HTTP route uses.
+		if proofService.CompatibilityAvailable() {
 			mcpCompatibility = proofService
 		}
 		// The composed Topics inventory is admitted on exactly the boundary its

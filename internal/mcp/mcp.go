@@ -275,6 +275,9 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		if opts.KafkaTopicUsageOnly {
 			registerKafkaTopicUsageTool(s, opts)
 		}
+		// PHEBS-41: serve supplies Compatibility on the released surface only
+		// under the composed change-impact claim.
+		registerContractCompatibilityTool(s, opts)
 		return
 	}
 
@@ -312,6 +315,10 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		return nil, *result, nil
 	})
 
+	registerContractCompatibilityTool(s, opts)
+}
+
+func registerContractCompatibilityTool(s *sdk.Server, opts Options) {
 	if opts.Compatibility == nil {
 		return
 	}

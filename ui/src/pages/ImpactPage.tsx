@@ -49,10 +49,13 @@ export default function ImpactPage({
 }) {
   const stable = capabilities.includes('contract-impact-operation')
   const legacy = capabilities.includes('contract-impact-report')
-  if (params.has('shape') || (stable && !legacy)) {
+  // PHEBS-41: the released change-impact claim serves field and change
+  // reports only; its operation questions stay on the exact operation report.
+  const change = capabilities.includes('contract-impact-change')
+  if (params.has('shape') || (stable && !legacy && !change)) {
     return <OperationImpactView params={params} available={stable} />
   }
-  return <LegacyImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} />
+  return <LegacyImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} operationAvailable={legacy} />
 }
 
 function OperationImpactView({ params, available }: { params: URLSearchParams; available: boolean }) {
@@ -73,14 +76,15 @@ function OperationImpactView({ params, available }: { params: URLSearchParams; a
   return <CallerMapPage params={params} operationImpact />
 }
 
-function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
+function LegacyImpactPage({ params, compatibilityAvailable, capabilities, operationAvailable }: {
   params: URLSearchParams
   compatibilityAvailable: boolean
   capabilities: readonly string[]
+  operationAvailable: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [mode, setMode] = useState<Mode>('operation')
+  const [mode, setMode] = useState<Mode>(operationAvailable ? 'operation' : 'field')
   const [operation, setOperation] = useState(params.get('operation') ?? '')
   const [lineage, setLineage] = useState('')
   const [message, setMessage] = useState('')
@@ -150,6 +154,7 @@ function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
     try {
       let result: ContractImpactReport
       if (mode === 'operation') {
+        if (!operationAvailable) throw new Error('Operation reports are served by the operation impact view.')
         if (!operation.trim()) throw new Error('Enter a canonical /package.Service/Method operation.')
         result = await fetchOperationImpact(operation.trim(), controller.signal)
       } else if (mode === 'field') {
@@ -194,12 +199,12 @@ function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
 
       <form onSubmit={submit} className={css({ border: `1px solid ${tok.cardBorder}`, marginBottom: '16px' })}>
         <div role="tablist" aria-label="Impact report kind" className={css({ display: 'flex', borderBottom: `1px solid ${tok.cardBorder}`, overflowX: 'auto' })}>
-          <ModeTab selected={mode === 'operation'} onClick={() => selectMode('operation')}>Operation</ModeTab>
+          {operationAvailable && <ModeTab selected={mode === 'operation'} onClick={() => selectMode('operation')}>Operation</ModeTab>}
           <ModeTab selected={mode === 'field'} onClick={() => selectMode('field')}>Field</ModeTab>
           {compatibilityAvailable && <ModeTab selected={mode === 'change'} onClick={() => selectMode('change')}>Contract change</ModeTab>}
         </div>
         <div className={css({ padding: '14px', display: 'grid', gap: '12px' })}>
-          {mode === 'operation' && (
+          {mode === 'operation' && operationAvailable && (
             <div className={css({ display: 'flex', gap: '10px', '@media screen and (max-width: 620px)': { flexDirection: 'column' } })}>
               <div className={css({ flex: 1 })}>
                 <Input

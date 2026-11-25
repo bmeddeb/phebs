@@ -17,7 +17,14 @@ import (
 
 const (
 	contractImpactReportSchemaVersion = "contract-impact-report-v2"
-	impactScopePhrase                 = "within the stated evidence scope"
+	// ContractImpactReportSchemaVersion names the report projection a released
+	// change-impact claim binds (PHEBS-41).
+	ContractImpactReportSchemaVersion = contractImpactReportSchemaVersion
+	// changeImpactCapability advertises released field/change Contract Impact
+	// reports. It is distinct from the experimental contract-impact-report,
+	// whose operation entry joins unreleased name-matching consumers.
+	changeImpactCapability = "contract-impact-change"
+	impactScopePhrase      = "within the stated evidence scope"
 )
 
 var errUnsupportedImpactBundle = errors.New("proof bundle does not describe a contract impact question")
@@ -40,6 +47,9 @@ func proofCapabilities(opts Options) []string {
 		}
 		if opts.ThriftFieldReferencesReleased {
 			capabilities = append(capabilities, "thrift-field-references")
+		}
+		if service.CompatibilityAvailable() {
+			capabilities = append(capabilities, changeImpactCapability, "contract-compatibility")
 		}
 		sort.Strings(capabilities)
 		return capabilities
@@ -128,6 +138,11 @@ type ImpactCoverageRow struct {
 // syntactic candidates the extractor deliberately could not disambiguate.
 func (s *ProofService) BuildOperationImpactReport(ctx context.Context, operation string) (*ContractImpactReport, error) {
 	if s == nil || releasedProofOnly(s.opts) {
+		if s != nil && s.opts.ChangeImpactReleased {
+			// The released change-impact claim never admits the name-matching
+			// consumer domains this entry joins.
+			return nil, huma.Error503ServiceUnavailable("operation entries are served by /api/operation_impact_report")
+		}
 		return nil, huma.Error503ServiceUnavailable("contract impact reports unavailable")
 	}
 	if err := validateOperation(operation); err != nil {
@@ -166,7 +181,7 @@ func (s *ProofService) BuildOperationImpactReport(ctx context.Context, operation
 
 // BuildFieldImpactReport reports references to one stable field identity.
 func (s *ProofService) BuildFieldImpactReport(ctx context.Context, lineage, message string, fieldNumber int) (*ContractImpactReport, error) {
-	if s == nil || releasedProofOnly(s.opts) {
+	if !s.impactReportsAvailable() {
 		return nil, huma.Error503ServiceUnavailable("contract impact reports unavailable")
 	}
 	envelope, err := buildAndPersistProofBundle(
@@ -204,7 +219,7 @@ func (s *ProofService) BuildChangeImpactReport(ctx context.Context, request comp
 // its report. A report URL is therefore no more a bearer credential than the
 // underlying bundle ID.
 func (s *ProofService) ReadContractImpactReport(ctx context.Context, id string) (*ContractImpactReport, error) {
-	if s == nil || releasedProofOnly(s.opts) {
+	if !s.impactReportsAvailable() {
 		return nil, huma.Error503ServiceUnavailable("contract impact reports unavailable")
 	}
 	envelope, err := readProofBundle(ctx, s.opts, id)
@@ -216,6 +231,13 @@ func (s *ProofService) ReadContractImpactReport(ctx context.Context, id string) 
 		return nil, huma.Error422UnprocessableEntity(err.Error())
 	}
 	return report, err
+}
+
+// impactReportsAvailable admits field/change reports and saved report reads on
+// the experimental surface or under the released change-impact claim. Each
+// bundle is still re-admitted by admitProofQuery on build and on every read.
+func (s *ProofService) impactReportsAvailable() bool {
+	return s != nil && (!releasedProofOnly(s.opts) || s.opts.ChangeImpactReleased)
 }
 
 func registerContractImpactAPI(api huma.API, opts Options, service *ProofService) {

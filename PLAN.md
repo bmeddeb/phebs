@@ -19282,3 +19282,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     MED-500, MED-501 and MED-504 stay open as integration-test work.
   - **Steady-state cost.** Documentation only: zero runtime, request, sync,
     publication, startup, lock, cache, storage or child cost.
+- **2026-11-25 — PHEBS-41 releases change impact on released planes (Ben-approved design).**
+  Goal: bring the dark proof surface to production where it is built only from
+  released parts. Proof-enriched compatibility and the field and
+  proposed-change Contract Impact reports read only two planes: the signed Buf
+  WIRE verdict (`phebs.protobuf.wire.buf`) and released field references
+  (`phebs.protobuf.field.go`, plus the Thrift field recipes for field
+  reports). They stayed dark only because `releasedProofOnly` gated the whole
+  proof surface.
+  - **Decision.** A claim-only pack, `phebs.protobuf.change-impact` 1.0.0, in
+    the pattern of `phebs.kafka.topics` and `phebs.contract.impact.operation`.
+    Its implementation identity is
+    `build_contract_change_impact@contract-impact-report-v2+buf-1.72.0-WIRE`,
+    so it joins the pack implementation digest. It is admitted only beside the
+    WIRE claim and the protobuf field release, with a started checker and no
+    provisional switch; otherwise it is withdrawn with a logged reason.
+  - **Surfaces.** `POST /api/check_contract_compatibility`, the MCP tool of the
+    same name, `GET`/`POST /api/contract_impact_report` for a field identity or
+    a proposed change, and saved report reads; capabilities
+    `contract-compatibility` and `contract-impact-change`. The Impact page shows
+    the Field and Contract change tabs without an Operation tab.
+  - **Boundary.** `admitProofQuery` admits `check_contract_compatibility` only
+    over `scip-proto-field`, and `contract_impact_field` only over the released
+    field domains. Saved bundles are re-admitted on every read. The operation
+    entry answers 503 and names `/api/operation_impact_report`. Name-matching
+    consumer evidence (T58 NO-GO) is never read. The experimental proof surface
+    under a provisional switch is unchanged.
+  - **Not established.** No new extraction, domain or measurement; quality is
+    inherited from the two composed claims. Expiry is 2027-01-10, the WIRE
+    claim's.
+  - **Steady-state cost.** Startup adds one map lookup per dependency and one
+    claim-version check. Requests use the existing compatibility checker,
+    bounded proof builder and bundle store; no new worker, cache, lock, child,
+    timer, index or schema. A dark install registers nothing new.

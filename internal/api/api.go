@@ -182,6 +182,14 @@ type Options struct {
 	// ThriftFieldReferencesReleased independently admits the signed selected
 	// Thrift generator set, without protobuf or the provisional proof umbrella.
 	ThriftFieldReferencesReleased bool
+	// ChangeImpactReleased admits the composed change-impact claim on the
+	// released surface (PHEBS-41): proof-enriched protobuf compatibility and
+	// field/change Contract Impact reports built only from the released Buf
+	// WIRE verdict and released field-reference planes. Serve sets it only
+	// with a verified phebs.protobuf.change-impact record, the released wire
+	// claim and released scip-proto-field; operation reports stay on the
+	// separate operation-impact claim, and name-matching consumers stay dark.
+	ChangeImpactReleased bool
 	// EvidenceExtractorVersions fences admitted domains to exact extraction
 	// versions, including raw reads and retained bundles. Nil is unrestricted.
 	EvidenceExtractorVersions map[string]string

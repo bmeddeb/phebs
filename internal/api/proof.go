@@ -308,7 +308,10 @@ func (s *ProofService) GetExtractionCoverage(ctx context.Context, domains []stri
 // genuine compatibility operation. Transports use it to avoid advertising a
 // permanently failing placeholder when the Buf sandbox is unavailable.
 func (s *ProofService) CompatibilityAvailable() bool {
-	return s != nil && !releasedProofOnly(s.opts) && s.opts.Compatibility != nil
+	if s == nil || s.opts.Compatibility == nil {
+		return false
+	}
+	return !releasedProofOnly(s.opts) || s.opts.ChangeImpactReleased && s.opts.ProtobufFieldReferencesReleased
 }
 
 // CheckContractCompatibility runs the pinned Buf WIRE policy, maps findings
@@ -356,6 +359,10 @@ func registerProofAPI(api huma.API, opts Options) {
 		if opts.KafkaTopicInventoryReleased {
 			registerTopicInventoryAPI(api, service)
 		}
+		if service.CompatibilityAvailable() {
+			registerContractCompatibilityAPI(api, service)
+			registerContractImpactAPI(api, opts, service)
+		}
 		return
 	}
 
@@ -390,26 +397,31 @@ func registerProofAPI(api huma.API, opts Options) {
 		return &proofOut{Body: *envelope}, nil
 	})
 	if service.CompatibilityAvailable() {
-		type compatibilityIn struct {
-			Body compat.Request
-		}
-		huma.Register(api, huma.Operation{
-			OperationID: "check-contract-compatibility",
-			Method:      "POST", Path: "/api/check_contract_compatibility",
-			Summary:      "Check protobuf wire compatibility and find affected field references",
-			MaxBodyBytes: compatibilityBodyLimit,
-		}, func(ctx context.Context, in *compatibilityIn) (*proofOut, error) {
-			envelope, err := service.CheckContractCompatibility(ctx, in.Body)
-			if err != nil {
-				return nil, err
-			}
-			return &proofOut{Body: *envelope}, nil
-		})
+		registerContractCompatibilityAPI(api, service)
 	}
 
 	registerProofBundleReadAPI(api, opts)
 	registerContractImpactAPI(api, opts, service)
 	registerTopicInventoryAPI(api, service)
+}
+
+func registerContractCompatibilityAPI(api huma.API, service *ProofService) {
+	type proofOut struct{ Body ProofBundleEnvelope }
+	type compatibilityIn struct {
+		Body compat.Request
+	}
+	huma.Register(api, huma.Operation{
+		OperationID: "check-contract-compatibility",
+		Method:      "POST", Path: "/api/check_contract_compatibility",
+		Summary:      "Check protobuf wire compatibility and find affected field references",
+		MaxBodyBytes: compatibilityBodyLimit,
+	}, func(ctx context.Context, in *compatibilityIn) (*proofOut, error) {
+		envelope, err := service.CheckContractCompatibility(ctx, in.Body)
+		if err != nil {
+			return nil, err
+		}
+		return &proofOut{Body: *envelope}, nil
+	})
 }
 
 func registerFieldReferenceAPI(api huma.API, service *ProofService) {

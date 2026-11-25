@@ -172,11 +172,20 @@ var releasedClaims = map[string]string{
 	kafkaTopicsPackID:       "list_kafka_topics@" + api.TopicInventorySchemaVersion, // T57.3
 	callerComparisonPackID:  "compare_operation_callers@" + api.CallerComparisonSchemaVersion,
 	operationImpactPackID:   "build_operation_impact_report@" + api.OperationImpactSchemaVersion,
+	changeImpactPackID: "build_contract_change_impact@" + api.ContractImpactReportSchemaVersion +
+		"+buf-" + compat.Version + "-" + compat.Policy, // PHEBS-41
 }
 
 const callerComparisonPackID = "phebs.grpc.caller.comparison"
 const operationImpactPackID = "phebs.contract.impact.operation"
 const operationImpactClaimVersion = "1.0.0"
+
+// changeImpactPackID is the PHEBS-41 composed change-impact claim: the
+// released Buf WIRE verdict enriched only by released field references, as
+// proof-enriched compatibility and field/change Contract Impact reports. It
+// admits nothing alone; see releasedChangeImpact.
+const changeImpactPackID = "phebs.protobuf.change-impact"
+const changeImpactClaimVersion = "1.0.0"
 
 // kafkaProducerPackID is the T55.1 site-coverage card
 // (docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md): the kafka-producer plane alone.
@@ -327,6 +336,12 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 			record, _ := selection.Released(packID)
 			if record.PackClaimVersion != operationImpactClaimVersion {
 				return nil, nil, fmt.Errorf("unsupported operation Impact claim version %q", record.PackClaimVersion)
+			}
+		}
+		if packID == changeImpactPackID {
+			record, _ := selection.Released(packID)
+			if record.PackClaimVersion != changeImpactClaimVersion {
+				return nil, nil, fmt.Errorf("unsupported change Impact claim version %q", record.PackClaimVersion)
 			}
 		}
 		if packID == protobufFieldPackID {

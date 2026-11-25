@@ -59,7 +59,8 @@ func releasedFieldDomain(opts Options, domain string) bool {
 // All transports and direct proof/report calls converge here before visibility
 // or source reads. A released recipe cannot inherit the provisional umbrella.
 func admitProofQuery(opts Options, query ProofQuery) error {
-	if query.Kind == "find_proto_field_references" || query.Kind == "find_field_references" {
+	if query.Kind == "find_proto_field_references" || query.Kind == "find_field_references" ||
+		query.Kind == "contract_impact_field" || query.Kind == "check_contract_compatibility" {
 		for _, domain := range query.Domains {
 			if domain == "scip-proto-field" || domain == "scip-thrift-field" {
 				if err := admittedFieldIdentity(opts, domain, query.Lineage); err != nil {
@@ -91,6 +92,25 @@ func admitProofQuery(opts Options, query ProofQuery) error {
 				allowed[domain] = true
 			}
 		}
+	case "contract_impact_field":
+		// PHEBS-41: a released field report reads exactly the released field
+		// planes, under the composed change-impact claim.
+		if !opts.ChangeImpactReleased || !opts.ProtobufFieldReferencesReleased && !opts.ThriftFieldReferencesReleased {
+			return huma.Error503ServiceUnavailable("contract impact reports unavailable")
+		}
+		allowed = map[string]bool{}
+		for _, domain := range []string{"scip-proto-field", "scip-thrift-field"} {
+			if releasedFieldDomain(opts, domain) {
+				allowed[domain] = true
+			}
+		}
+	case "check_contract_compatibility":
+		// PHEBS-41: the released Buf verdict enriched only by released
+		// protobuf field references.
+		if !opts.ChangeImpactReleased || !opts.ProtobufFieldReferencesReleased {
+			return huma.Error503ServiceUnavailable("contract compatibility unavailable")
+		}
+		allowed = map[string]bool{"scip-proto-field": true}
 	case "find_kafka_topic_usage":
 		if len(opts.KafkaReleasedPlanes) == 0 {
 			return huma.Error503ServiceUnavailable("Kafka topic usage unavailable")
