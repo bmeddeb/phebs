@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -105,8 +106,8 @@ func (s *CallerComparisonService) compareExact(
 	if err != nil {
 		return nil, err
 	}
-	if s.opts.CallerComparisonReleased && (oldPack.protocol != "protobuf" || replacementPack.protocol != "protobuf") {
-		return nil, huma.Error503ServiceUnavailable("the released caller comparison supports protobuf endpoint pairs only")
+	if err := releasedComparisonPairAdmits(s.opts, oldPack.protocol, replacementPack.protocol); err != nil {
+		return nil, err
 	}
 	queryDigest := digestJSON(struct {
 		Query CallerComparisonQuery `json:"query"`
@@ -259,6 +260,34 @@ func (s *CallerComparisonService) compareExact(
 		return nil, err
 	}
 	return page, nil
+}
+
+// releasedComparisonPairAdmits applies the released comparison claims. With
+// no released claim (provisional-only admission) every pair the exact engine
+// accepts is compared. Otherwise a pair is compared only when both endpoints
+// share a protocol whose own claim is released: protobuf pairs under
+// phebs.grpc.caller.comparison, Thrift pairs under
+// phebs.thrift.caller.comparison (PHEBS-44). Mixed pairs are never released.
+func releasedComparisonPairAdmits(opts Options, oldProtocol, replacementProtocol string) error {
+	if !opts.CallerComparisonReleased && !opts.ThriftCallerComparisonReleased {
+		return nil
+	}
+	if oldProtocol == replacementProtocol &&
+		(oldProtocol == "protobuf" && opts.CallerComparisonReleased ||
+			oldProtocol == "thrift" && opts.ThriftCallerComparisonReleased) {
+		return nil
+	}
+	var supported []string
+	if opts.CallerComparisonReleased {
+		supported = append(supported, "protobuf")
+	}
+	if opts.ThriftCallerComparisonReleased {
+		supported = append(supported, "thrift")
+	}
+	return huma.Error503ServiceUnavailable(
+		"the released caller comparison supports same-protocol " +
+			strings.Join(supported, " or ") + " endpoint pairs only",
+	)
 }
 
 func exactCallerComparisonScanAdmits(oldScanned, replacementScanned int) bool {

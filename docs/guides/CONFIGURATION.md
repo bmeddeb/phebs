@@ -1720,14 +1720,46 @@ It does not serve:
 
 - thriftrw, YARPC, Kitex or fbthrift clients, which are not resolved;
 - name-matching `thrift-consumer` evidence;
-- caller comparison or operation Impact for Thrift. Their released claims
-  stay protobuf-only, with or without this recipe.
+- operation Impact for Thrift, whose released claim stays protobuf-only. Thrift
+  caller comparison is its own claim (see below).
 
 A missing, expired, revoked or suspended record admits no released Thrift
 caller; the protobuf Caller Map is unaffected. The release package ships the
 recipe on by default, and `package_default: off` keeps it dark with the rest.
 Steady-state cost is the protobuf recipe's: one more registered extractor
 pair, with no new worker, cache, lock, timer, index or schema.
+
+### Thrift caller comparison release selection (PHEBS-44)
+
+The claim `phebs.thrift.caller.comparison`, claim version 1.0.0, releases the
+existing exact caller comparison for Thrift-to-Thrift endpoint pairs: an old
+and a replacement Thrift operation, each named by its Contract Atlas identity.
+It carries no extractor. It is admitted only beside the current released
+Thrift Caller Map recipe (`phebs.thrift.caller.go`), as the running
+extractors; a verified signed record selects it, and there is no YAML switch.
+
+It serves, for `old_protocol=thrift` and `replacement_protocol=thrift`:
+
+- the authenticated `/api/compare_operation_callers` route, the MCP
+  `compare_operation_callers` tool, the Caller comparison view and the
+  `contract-caller-comparison` capability;
+- the same neutral classes as the protobuf comparison (`old_only_evidence`,
+  `both_evidence`, `new_only_evidence`, `unresolved`), at occurrence or unit
+  level, built only from Thrift Caller Map evidence.
+
+Under any released comparison claim a pair is compared only when both
+endpoints share a protocol whose own claim is released. Mixed protobuf and
+Thrift pairs answer 503, and so do protobuf pairs unless
+`phebs.grpc.caller.comparison` is also selected; the protobuf claim likewise
+refuses Thrift pairs unless this one is selected. With only provisional
+switches on, the experimental comparison compares any pair, as before.
+
+A missing, expired, revoked or suspended record, or a withdrawn Thrift Caller
+Map, admits no Thrift comparison; the protobuf comparison is unaffected. The
+release package ships the claim on by default, and `package_default: off`
+keeps it dark with the rest. Steady-state cost is one map lookup and one
+protocol comparison per request; no new worker, cache, lock, timer, index or
+schema.
 
 ### Independent committed Thrift field recipes (T52.3)
 

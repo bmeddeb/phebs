@@ -21327,6 +21327,13 @@ with Thrift Atlas and Caller Map answers matching the bounded copy. See the
 2026-11-25 PHEBS-43 ADRs in `PLAN.md`. Receipts are in
 `~/phebs-instance/receipts/phebs43-2026-11-25/` on `dave`.
 
+*PHEBS-44 (2026-11-25, in progress):* the claim `phebs.thrift.caller.comparison`
+1.0.0 releases caller comparison for Thrift-to-Thrift endpoint pairs over the
+existing exact comparison route, MCP tool and view, admitted only beside the
+released Thrift Caller Map recipe. Mixed protobuf and Thrift pairs stay
+unreleased (Ben, 2026-11-25), and operation Impact stays protobuf-only. See the
+2026-11-25 PHEBS-44 ADR in `PLAN.md`.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

@@ -19563,3 +19563,46 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       any API; the size is covered by unit tests.
     - Receipts are in `~/phebs-instance/receipts/phebs43-2026-11-25/` on
       `dave`.
+
+- **2026-11-25 — PHEBS-44 releases Thrift caller comparison (Ben-approved scope).**
+  Goal: turn the dark Thrift caller comparison into a released product
+  surface. The exact comparison engine already compares Thrift pairs; the
+  released `phebs.grpc.caller.comparison` claim refused every non-protobuf pair
+  with 503, so Thrift pairs served only under a provisional switch.
+  - **Decision.** A claim-only pack, `phebs.thrift.caller.comparison` 1.0.0,
+    bound as `compare_operation_callers@caller-comparison-v2+thrift-pairs`. It
+    is admitted only beside the current released Thrift Caller Map recipe
+    (`thrift-contract@1.1.2` plus `thrift-caller@1.6.0-released.1`) as the
+    running extractors, as operation Impact is admitted beside the protobuf
+    recipe. The comparison algorithm, schema and bounds are unchanged.
+  - **Scope (Ben, 2026-11-25: Thrift-to-Thrift only).** Under any released
+    comparison claim a pair is compared only when both endpoints share a
+    protocol whose own claim is released. Mixed protobuf and Thrift pairs answer
+    503 under every released claim, so the Thrift-to-gRPC migration case stays
+    unreleased: `dave` has no repository to verify it on. Rejected: inferring
+    Thrift support from the protobuf claim (T47.1: protocol support is never
+    inferred from the other protocol's results).
+  - **Acceptance.** Bounded integration tests and the three gates (2026-11-08
+    rule):
+    - the admission matrix (joint, beside the Thrift Atlas, claim alone,
+      Thrift Caller Map alone, beside only the protobuf Caller Map, beside the
+      protobuf comparison family, revoked, suspended, expired, experimental
+      Thrift as no released dependency, unsupported claim version);
+    - the release fence over every pair under the protobuf claim, the Thrift
+      claim and both, with refused pairs reading no caller publication;
+    - a Thrift pair compared end to end over HTTP with the four neutral
+      classes, per-side declarations and a readable citation.
+    Then `dave`: gohive's root and `v2/` TCLIService lineages as the old and
+    replacement endpoints.
+  - **Not established.** No migration-completeness, precision, recall,
+    runtime-use, retirement-safety or scale claim; an empty side never proves
+    caller absence. Expiry is 2027-01-12, the Thrift Caller Map's.
+  - **Steady-state cost.** One map lookup and one protocol comparison per
+    comparison request, and one extractor-version scan at startup. No new
+    worker, cache, lock, child, timer, index or schema; no ceiling raised.
+  - **Release.** Ships as `v0.3.11` with fifteen signed records. The fourteen
+    existing templates take a patch bump for the rebind; no claim, card,
+    reader version, approval or expiry changes. `thrift-caller-comparison`
+    1.0.0 is new. The `thrift-caller-map` card's "caller comparison stays
+    protobuf-only" line is left byte-identical (its digest is bound); the new
+    card supersedes it for Thrift pairs only.

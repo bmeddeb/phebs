@@ -263,6 +263,29 @@ func releasedCallerComparison(claims, domains map[string]bool) bool {
 	return true
 }
 
+// releasedThriftCallerComparison admits the PHEBS-44 claim only beside the
+// current released Thrift Caller Map recipe: the released Thrift declaration
+// and caller admissions must both be the running extractors, so a dark or
+// experimental Thrift caller generation never backs a released comparison.
+func releasedThriftCallerComparison(d *serveDeps) bool {
+	if !d.releasedClaims[thriftCallerComparisonPackID] {
+		return false
+	}
+	if d.releasedDomains["thrift-contract"] && d.releasedDomains["thrift-caller"] {
+		declaration, caller := false, false
+		want := thriftCallerMapRecipe()
+		for _, ex := range d.exs {
+			declaration = declaration || ex.Domain() == "thrift-contract" && ex.Version() == want[0].Version()
+			caller = caller || ex.Domain() == "thrift-caller" && ex.Version() == want[1].Version()
+		}
+		if declaration && caller {
+			return true
+		}
+	}
+	log.Printf("release selection: %s withdrawn: its comparison needs the current released Thrift Caller Map recipe", thriftCallerComparisonPackID)
+	return false
+}
+
 func releasedOperationImpact(d *serveDeps) bool {
 	if !d.releasedClaims[operationImpactPackID] {
 		return false
@@ -339,6 +362,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		typedProvider = d.typedRuntime.registry.provider
 	}
 	comparisonReleased := releasedCallerComparison(d.releasedClaims, d.releasedDomains)
+	thriftComparisonReleased := releasedThriftCallerComparison(d)
 	apiOpts := api.Options{
 		Version:                     version,
 		TypedIndexAvailable:         d.typedRuntime != nil,
@@ -371,13 +395,14 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		ContractCatalogUnadmitted: !provisionalExtractionOn(cfg) &&
 			!d.releasedDomains["proto-contract"] && !d.releasedDomains["thrift-contract"],
 		CallerMapEnabled: d.callerRegistry.Enabled(),
-		CallerComparisonEnabled: comparisonReleased || cfg.Experimental.ProvisionalProtoExtraction ||
-			cfg.Experimental.ProvisionalThriftExtraction,
-		CallerComparisonReleased: comparisonReleased,
-		OperationImpactEnabled:   releasedOperationImpact(d),
-		CallerReader:             d.callerReader,
-		ProofBundleRetention:     cfg.ProofBundles.RetentionFor(),
-		Compatibility:            d.compatibility, Visible: d.visibleFor,
+		CallerComparisonEnabled: comparisonReleased || thriftComparisonReleased ||
+			cfg.Experimental.ProvisionalProtoExtraction || cfg.Experimental.ProvisionalThriftExtraction,
+		CallerComparisonReleased:       comparisonReleased,
+		ThriftCallerComparisonReleased: thriftComparisonReleased,
+		OperationImpactEnabled:         releasedOperationImpact(d),
+		CallerReader:                   d.callerReader,
+		ProofBundleRetention:           cfg.ProofBundles.RetentionFor(),
+		Compatibility:                  d.compatibility, Visible: d.visibleFor,
 		WireCompatibility: admittedWireCompatibility(cfg, d.releasedClaims, d.compatibility),
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)

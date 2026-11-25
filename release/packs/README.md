@@ -16,8 +16,9 @@ against the in-tree trust anchor.
 
 - `artifacts/` holds the 57 published artifacts from
   `v0.2.1-experimental.20261020`, byte for byte, plus the three
-  `change-impact-*-1.0.0` artifacts PHEBS-41 added and the three
-  `thrift-caller-map-*-1.0.0` artifacts PHEBS-42 added on 2026-11-25. The records bind their
+  `change-impact-*-1.0.0` artifacts PHEBS-41 added, the three
+  `thrift-caller-map-*-1.0.0` artifacts PHEBS-42 added and the three
+  `thrift-caller-comparison-*-1.0.0` artifacts PHEBS-44 added on 2026-11-25. The records bind their
   digests and the complete census, so never edit, add or remove a file
   without re-qualifying the affected pack.
 - `templates/` holds one `PackRelease` template per pack, derived from the

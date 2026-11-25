@@ -172,12 +172,23 @@ var releasedClaims = map[string]string{
 	wireCompatibilityPackID: "check_wire_compatibility@buf-" + compat.Version + "-" + compat.Policy,
 	kafkaTopicsPackID:       "list_kafka_topics@" + api.TopicInventorySchemaVersion, // T57.3
 	callerComparisonPackID:  "compare_operation_callers@" + api.CallerComparisonSchemaVersion,
-	operationImpactPackID:   "build_operation_impact_report@" + api.OperationImpactSchemaVersion,
+	// PHEBS-44: the same exact comparison service, admitted for Thrift pairs.
+	thriftCallerComparisonPackID: "compare_operation_callers@" + api.CallerComparisonSchemaVersion + "+thrift-pairs",
+	operationImpactPackID:        "build_operation_impact_report@" + api.OperationImpactSchemaVersion,
 	changeImpactPackID: "build_contract_change_impact@" + api.ContractImpactReportSchemaVersion +
 		"+buf-" + compat.Version + "-" + compat.Policy, // PHEBS-41
 }
 
 const callerComparisonPackID = "phebs.grpc.caller.comparison"
+
+// thriftCallerComparisonPackID is the PHEBS-44 claim: caller comparison for
+// Thrift-to-Thrift endpoint pairs, admitted only beside the released Thrift
+// Caller Map recipe (see releasedThriftCallerComparison). Mixed protobuf and
+// Thrift pairs stay unreleased.
+const (
+	thriftCallerComparisonPackID       = "phebs.thrift.caller.comparison"
+	thriftCallerComparisonClaimVersion = "1.0.0"
+)
 const operationImpactPackID = "phebs.contract.impact.operation"
 const operationImpactClaimVersion = "1.0.0"
 
@@ -343,6 +354,12 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 			record, _ := selection.Released(packID)
 			if record.PackClaimVersion != changeImpactClaimVersion {
 				return nil, nil, fmt.Errorf("unsupported change Impact claim version %q", record.PackClaimVersion)
+			}
+		}
+		if packID == thriftCallerComparisonPackID {
+			record, _ := selection.Released(packID)
+			if record.PackClaimVersion != thriftCallerComparisonClaimVersion {
+				return nil, nil, fmt.Errorf("unsupported Thrift caller comparison claim version %q", record.PackClaimVersion)
 			}
 		}
 		if packID == thriftCallerMapPackID {
@@ -522,8 +539,9 @@ func (releasedGRPCCaller) Version() string { return "1.6.0-released.1" }
 // thriftCallerMapPackID is the PHEBS-42 Thrift Caller Map: Go callers of
 // Apache-Thrift-compiler-generated clients, attributed through the released
 // Thrift declaration lineage. It mirrors callerMapPackID for the Thrift lane.
-// thriftrw/YARPC clients are outside its scope, and caller comparison and
-// operation Impact stay protobuf-only under their own released claims.
+// thriftrw/YARPC clients are outside its scope. Thrift caller comparison is
+// its own claim (thriftCallerComparisonPackID, PHEBS-44); operation Impact
+// stays protobuf-only.
 const (
 	thriftCallerMapPackID       = "phebs.thrift.caller.go"
 	thriftCallerMapClaimVersion = "1.0.0"

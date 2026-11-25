@@ -109,6 +109,11 @@ type Options struct {
 	// CallerComparisonReleased restricts the selected claim to its supported
 	// protobuf endpoint pairs, including when provisional switches are also on.
 	CallerComparisonReleased bool
+	// ThriftCallerComparisonReleased admits Thrift-to-Thrift endpoint pairs
+	// under their own signed claim (PHEBS-44). When either released flag is
+	// set, only same-protocol pairs whose protocol has a released claim are
+	// compared; mixed protobuf/Thrift pairs are refused.
+	ThriftCallerComparisonReleased bool
 	// OperationImpactEnabled requires the independent signed operation-report
 	// claim and its actual released Caller Map recipe. Provisional flags do not
 	// substitute for either dependency.

@@ -143,8 +143,19 @@ func newExactCallerComparisonFixture(
 	t *testing.T,
 ) (*exactCallerAPIFixture, *api.CallerComparisonService) {
 	t.Helper()
-	fixture := newExactCallerAPIFixtureWithMutators(
-		t, 5, nil,
+	return newExactCallerComparisonFixtureFor(t, protobufExactCaller)
+}
+
+// newExactCallerComparisonFixtureFor builds the five-record comparison
+// fixture on one protocol lane: old and replacement lineages of the same
+// operation, a shared occurrence, a replacement-only row and an abstention.
+func newExactCallerComparisonFixtureFor(
+	t *testing.T,
+	lane exactCallerProtocol,
+) (*exactCallerAPIFixture, *api.CallerComparisonService) {
+	t.Helper()
+	fixture := newExactCallerAPIFixtureFor(
+		t, 5, exactCallerRepository, t.TempDir(), nil,
 		func(record *callerleaf.Record) {
 			index, err := strconv.Atoi(record.Fact.Atom.FactFingerprint)
 			if err != nil {
@@ -193,8 +204,9 @@ func newExactCallerComparisonFixture(
 			}
 			record.Fact.Assertion.Detail = string(encoded)
 		},
+		lane,
 	)
-	return finishExactCallerComparisonFixture(t, fixture)
+	return finishExactCallerComparisonFixtureFor(t, fixture, lane)
 }
 
 func finishExactCallerComparisonFixture(
@@ -202,11 +214,20 @@ func finishExactCallerComparisonFixture(
 	fixture *exactCallerAPIFixture,
 ) (*exactCallerAPIFixture, *api.CallerComparisonService) {
 	t.Helper()
+	return finishExactCallerComparisonFixtureFor(t, fixture, protobufExactCaller)
+}
+
+func finishExactCallerComparisonFixtureFor(
+	t *testing.T,
+	fixture *exactCallerAPIFixture,
+	lane exactCallerProtocol,
+) (*exactCallerAPIFixture, *api.CallerComparisonService) {
+	t.Helper()
 	declaration, resolution := catalogAssertion(
 		fixture.repository, exactDeclarationRun, "exact-replacement-declaration",
-		"DECLARES_OPERATION", "idl/orders.proto",
-		strings.TrimPrefix(exactCallerOperation, "/"), replacementLineage,
-		`{"schema":"proto-operation-detail-v1"}`,
+		"DECLARES_OPERATION", lane.idlPath,
+		strings.TrimPrefix(lane.operation, "/"), replacementLineage,
+		`{"schema":"`+lane.operationSchema+`"}`,
 	)
 	resolution.Occurrences[0].Commit = fixture.commit
 	putCatalogAssertion(fixture.store.proofAPIStore, declaration, resolution)
@@ -225,8 +246,8 @@ func exactComparisonQuery(fixture *exactCallerAPIFixture) api.CallerComparisonQu
 	return api.CallerComparisonQuery{
 		Old: fixture.query.Endpoint,
 		Replacement: api.CallerMapEndpoint{
-			Protocol: "protobuf", Repository: fixture.repository,
-			Lineage: replacementLineage, Operation: exactCallerOperation,
+			Protocol: fixture.query.Endpoint.Protocol, Repository: fixture.repository,
+			Lineage: replacementLineage, Operation: fixture.query.Endpoint.Operation,
 		},
 		Freshness: "any", Resolution: "any", Ordering: "source",
 		Level: "occurrence",
