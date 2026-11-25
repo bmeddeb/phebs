@@ -1,0 +1,114 @@
+{
+ "schema": "phebs-final-release-validation-v1",
+ "pack_id": "phebs.thrift.caller.go",
+ "pack_claim_version": "1.0.0",
+ "source_commit": "16ffb5bee8462ff7969e51791a04a1b45e490fe0",
+ "binary_digest": "sha256:5b957bfac9190abb83c13dace3fbd5cea5a11bd4cf95a75a6ff81a1c10df20e9",
+ "binary_digest_scope": "CGO_ENABLED=0 go build -trimpath ./cmd/phebs at source_commit with go1.26.5 linux/amd64 on the test host; the released runtime is bound separately by its signed record.",
+ "qualification_artifact_id": null,
+ "qualification": "bounded-integration-tests (Ben's 2026-11-08 acceptance rule); no blind-label round",
+ "historical_measurement_scope": "No new extraction, measurement or truth population. thrift-caller 1.6.0 is the reader shipped dark since T20.8; this release admits it unchanged under a distinct admission version.",
+ "current_checks": [
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./cmd/phebs",
+    "-count=1",
+    "-timeout=180s",
+    "-run",
+    "^Test(ThriftCallerMap.*|CallerMapPackIdentityAndRecipeFrozen|CallerMapReleased.*|CallerComparisonReleasedAdmission|OperationImpactReleasedAdmission|ChangeImpactReleasedAdmission|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix|MergeExtractorsReleasedGovernsDomain|ReleaseLoadBindingsForDerivesEveryField|SignReleaseDerivesBindingsAndSelfVerifies)$"
+   ],
+   "pid": 74339,
+   "actual_wait": 0,
+   "seconds": 3.031240224838257,
+   "tests_passed": 84,
+   "tests_skipped": 0,
+   "log_sha256": "cd6a3fcdaa7f9c937b28e03feaa5a47a2b711334c9d2c695e9ada2c385e8ba3d"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/api",
+    "-count=1",
+    "-timeout=180s",
+    "-run",
+    "^Test(Exact(Thrift)?CallerMap.*|ExactCallerComparisonReleasedProtocolFence|.*OperationImpact.*)$"
+   ],
+   "pid": 74413,
+   "actual_wait": 0,
+   "seconds": 3.646284818649292,
+   "tests_passed": 60,
+   "tests_skipped": 0,
+   "log_sha256": "b425a6b4f755e98d947de19621e6d2c36c217b36bfc2fe4c53d875ccf0727652"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/extract",
+    "-count=1",
+    "-timeout=180s",
+    "-run",
+    "^Test(T2114CommittedBundleProducesDeclarationAndCallerLineage|T208TypedCallersPublishThroughTrustedWorker|T209SyntaxFallbackPublishesThroughTrustedWorker)$"
+   ],
+   "pid": 74926,
+   "actual_wait": 0,
+   "seconds": 1.1207079887390137,
+   "tests_passed": 5,
+   "tests_skipped": 0,
+   "log_sha256": "020f19ad4978cae5b301891082387f2cc120f831e017d84e6b2dde2b09c6a677"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/extract/extractors/gocaller",
+    "-count=1",
+    "-timeout=120s"
+   ],
+   "pid": 75081,
+   "actual_wait": 0,
+   "seconds": 0.8521366119384766,
+   "tests_passed": 21,
+   "tests_skipped": 0,
+   "log_sha256": "0dee8cd4ceccee39da2a2bc4bcae9ac3beffb20a5c3fe8a437fc4d828eefbb6d"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/packrelease",
+    "-count=1",
+    "-timeout=90s"
+   ],
+   "pid": 75152,
+   "actual_wait": 0,
+   "seconds": 0.3969104290008545,
+   "tests_passed": 106,
+   "tests_skipped": 0,
+   "log_sha256": "5babf4f91131175eeaa0eb8552c10a388f527e1084e92072e1f48deabc88ae7f"
+  }
+ ],
+ "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
+ "review": {
+  "source": "PHEBS-42 binds phebs.thrift.caller.go to thrift-contract@1.1.2 plus thrift-caller@1.6.0-released.1. Admission matrix covers dark, alone, beside the protobuf caller family, beside the Thrift Atlas, revoked, suspended, expired and an unsupported claim version; name-matching consumer domains are never registered.",
+  "evidence": "Dark and released Thrift caller facts are byte-identical over the t201 profile while candidate policy, caller generation and extractor-set digests change. A published thrift-caller generation is served end to end by the exact Caller Map with resolved rows and a bound citation. The T21.14 committed fixture joins a Thrift caller to its declaration lineage.",
+  "security": "Existing authenticated visibility/source/generation/citation fences, signed binary/artifact bindings and identity checks retained. Caller comparison and operation Impact keep refusing non-protobuf endpoints under their released claims.",
+  "steady_state_cost": "A dark install registers nothing new. A released install adds one extractor pair to the existing candidate, resolver, caller and publication pipeline; no new worker, cache, lock, child, timer, index or schema, and no ceiling raised."
+ },
+ "not_established": [
+  "Precision, recall or attribution accuracy of Thrift caller resolution",
+  "Completeness: an absent caller is not proven absent",
+  "thriftrw, YARPC, Kitex or fbthrift generated clients",
+  "Runtime or deployment usage, safe retirement",
+  "Linux capacity, scale or latency/throughput SLO"
+ ],
+ "expires_at": "2027-01-12T23:59:59Z"
+}
