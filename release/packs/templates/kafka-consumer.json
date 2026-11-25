@@ -1,7 +1,7 @@
 {
   "release_schema_version": "1.0",
-  "release_id": "rel-phebs.kafka.consumer-1.0.14",
-  "release_version": "1.0.14",
+  "release_id": "rel-phebs.kafka.consumer-1.0.15",
+  "release_version": "1.0.15",
   "pack_id": "phebs.kafka.consumer",
   "pack_claim_version": "1.0.4",
   "card": {
