@@ -1,7 +1,7 @@
 {
   "release_schema_version": "1.0",
-  "release_id": "rel-phebs.kafka.producer-1.0.13",
-  "release_version": "1.0.13",
+  "release_id": "rel-phebs.kafka.producer-1.0.14",
+  "release_version": "1.0.14",
   "pack_id": "phebs.kafka.producer",
   "pack_claim_version": "1.0.5",
   "card": {
