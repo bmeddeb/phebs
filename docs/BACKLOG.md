@@ -4110,6 +4110,16 @@ rehearsal pressure flow, so that port is not claimed. See the 2026-11-24
 MED-498 ADR in `PLAN.md` and
 `spike/t42h2r/native-pressure-restore-pass-dave-vm-20261124.json`.
 
+*MED-499 closed (2026-11-25, Ben-directed):* MED-496's V24 native pass
+(`0493be25`, `dave` host kernel) already proves source-owned aggregate
+admission. Its checkpoint resource policy (`sha256:8e863962…`) freezes
+physical and effective-cgroup capacity and charges RSS (4 GiB), payload, a
+kernel/cache allowance and host headroom separately, with no swap credit or
+Darwin limits. It ran 83,079 checks over the full 2,031,604-file population
+with no refusal. The prospective Linux plan, version and freeze binding is
+retired under the 2026-11-08 rule, as the T42.2o freeze was. Historical plans
+and receipts keep their bytes. See the 2026-11-25 MED-499 ADR in `PLAN.md`.
+
 **T42.H2o · Atomic Linux direct-input descriptor bundles** *(next H2 consumer
 prerequisite, 2026-10-19; needs H2b, independent of H2m).* Add one bounded
 `WithInputs` loan for 1–64 distinct selections from the same sealed-input
@@ -20589,7 +20599,7 @@ numbers are the Kite PHEBS tracker items that mirror each lane.
 
 | Lane | State and remaining tickets | Next observable result / hold |
 |---|---|---|
-| Linux mechanisms (T42.H2, MED-494) | Native passes on `dave`: H2r.c.c (MED-495), checkpoint/successor V24 at `0493be25` (MED-496), executor/profile V29, A1 and P5 at `7915f807` (MED-497), and the focused pressure/backup/restore composition at `d55c53a5` (MED-498, closed 2026-11-24; root in an LXD guest). Open: prospective plans and source-owned aggregate admission (MED-499). | Focused integration tests and tagged native tests on `dave` that exercise pressure, backup and restore. [Linux handoff #124](https://github.com/bmeddeb/phebs/issues/124) remains open for any of its commands that still apply. |
+| Linux mechanisms (T42.H2, MED-494) | Native passes on `dave`: H2r.c.c (MED-495), checkpoint/successor V24 at `0493be25` (MED-496), executor/profile V29, A1 and P5 at `7915f807` (MED-497), and the focused pressure/backup/restore composition at `d55c53a5` (MED-498, closed 2026-11-24; root in an LXD guest). MED-499 closed 2026-11-25: V24 covers aggregate admission, and the prospective plan binding is retired. Nothing open in this lane. | Focused integration tests and tagged native tests on `dave` that exercise pressure, backup and restore. [Linux handoff #124](https://github.com/bmeddeb/phebs/issues/124) remains open for any of its commands that still apply. |
 | Linux readiness and posture | T42.2v restored launch (MED-500) and T42.2n readiness (MED-501), both reduced to integration-test acceptance. T42.3 posture review (MED-504) follows. T42.2o freeze (MED-502) and separately authorized T42.2 execution (MED-503) are retired. | A restored-launch integration test on the exact head. T42.3 states posture without a scale or SLO claim unless one is measured. |
 | Installed managed SCIP | T45.7 / T45.10 (MED-505) closed 2026-11-24: materials rebuilt reproducibly on `dave` and all six neutral native acceptance cases pass. MED-695 is closed. | None for the neutral proof. Frozen public corpus cohorts, arbitrary repositories and scale stay unestablished; T45.10a presentation stays complete. |
 | Managed target qualification | T45.9 (MED-506). | Needs an eligible authorized 5,000-service/12-GB target and host. The T45.6 waiver and the generated-evidence STOP stay unpassed. |

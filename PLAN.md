@@ -44,9 +44,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (MED-496, V24 at `0493be25`, 2026-11-04) and executor/profile ownership
     (MED-497, V29/A1/P5 at `7915f807`) pass natively on `dave`. Pressure,
     backup and restore composition (MED-498) passed its focused root-tagged
-    native test on 2026-11-24, as root in an LXD guest on `dave`. Source-owned
-    aggregate admission (MED-499) remains. The T42.H2q direct-descriptor probe
-    was retired on 2026-11-09.
+    native test on 2026-11-24, as root in an LXD guest on `dave`. MED-499 closed
+    on 2026-11-25. Its aggregate admission is covered by the V24 native pass,
+    and its prospective Linux plan binding is retired. The T42.H2q
+    direct-descriptor probe was retired on 2026-11-09.
   - **Linux readiness:** T42.2v restored launch and T42.2n readiness remain as
     integration-test work. The T42.2o freeze and the separately authorized
     T42.2 ceremony are retired. T42.3 claims no scale or SLO result unless it
@@ -19256,3 +19257,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     added per request, sync, query, publication, startup, lock, cache or
     child. Ordinary CI gains four pure Linux unit tests. The native test runs
     only when both tags are set.
+- **2026-11-25 — MED-499 closes: aggregate admission covered, prospective plan binding retired (Ben-directed).**
+  MED-499 asked for two things. Ben chose to close it rather than build a
+  Linux-bound plan version that no ceremony would consume.
+  - **Aggregate admission: covered by the V24 native pass.** MED-496's V24
+    checkpoint test (`0493be25`, 2026-11-04, `dave` host kernel) ran the full
+    2,031,604-file population under the source-owned checkpoint resource
+    policy `sha256:8e863962…` (`linuxEpochCheckpointPolicySHA256`, derived
+    from `t42-linux-epoch-operational-resources-v11`). That policy:
+    - freezes physical and effective-cgroup capacity from fresh native facts;
+    - charges the whole-root RSS reservation (4 GiB), sealed payload trees and
+      images, a kernel/cache allowance and host headroom separately;
+    - gives no swap credit, no owned-memory credit and no inherited Darwin
+      limits.
+
+    It completed 83,079 resource checks with no refusal, joined every server
+    epoch, and left the session empty. See
+    `spike/t42h2r/native-checkpoint-pass-v24-dave-linux-20261104.json`.
+  - **Prospective Linux plan, version and freeze binding: retired.** That
+    part existed to admit a fresh ceremony freeze. The 2026-11-08 rule retired
+    ceremonies, freezes and attempt plans, as it did the T42.2o freeze. The
+    historical signed plans and receipts keep their exact bytes.
+  - **Not established:** a measured peak, a scale envelope, or readiness.
+    MED-500, MED-501 and MED-504 stay open as integration-test work.
+  - **Steady-state cost.** Documentation only: zero runtime, request, sync,
+    publication, startup, lock, cache, storage or child cost.
