@@ -80,6 +80,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-24, `5e77d3e2`) gaps a `.proto` file with an extension group or a
     conflicting declaration instead of refusing its repository (PHEBS-40),
     verified on `dave`.
+    [`v0.3.7`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.7)
+    (2026-11-25, `7166ea7a`) releases proof-enriched compatibility and the
+    field and proposed-change Contract Impact reports as the composed claim
+    `phebs.protobuf.change-impact` (PHEBS-41), verified on `dave`.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -19318,3 +19322,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   - **Release.** Ships as `v0.3.7` with thirteen signed records. The twelve
     existing pack templates take a patch bump for the rebind; no claim, card,
     reader version, approval or expiry changes. `change-impact` 1.0.0 is new.
+  - **Verified (2026-11-25).** `v0.3.7` was published from `7166ea7a`
+    (runtime sha256 `6eeba3f1…`) and installed on `dave` with an unchanged
+    config. 13 capabilities are lit: the previous 11 plus
+    `contract-compatibility` and `contract-impact-change`, with no
+    experimental `contract-impact-report`. Before the upgrade both endpoints
+    answered 404.
+    - Compatibility and the proposed-change report on microservices-demo's
+      real `demo.proto`, with `CartItem.quantity` removed, return "not
+      compatible" with one change. The unchanged file is compatible.
+    - The saved report re-reads under the same bundle id.
+    - A field report on a cadence Thrift field returns 17 `scip-thrift-field`
+      references.
+    - The operation entry answers 503 and names `operation_impact_report`.
+      MCP lists `check_contract_compatibility`.
+    - `dave` holds no protobuf field references, so protobuf reports there
+      carry the verdict and zero references. That is no released evidence, not
+      proven absence.
+    - No repository re-extracted. Failed partitions are only the `t222` and
+      `t225` fixtures.
+    - Receipts are in `~/phebs-instance/receipts/phebs41-2026-11-25/` on
+      `dave`.
