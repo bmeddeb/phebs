@@ -1,0 +1,81 @@
+{
+ "schema": "phebs-final-release-validation-v1",
+ "pack_id": "phebs.thrift.caller.comparison",
+ "pack_claim_version": "1.0.0",
+ "source_commit": "ec9d41adcaa25e50cdf2ae2a24179ebb9adfc96f",
+ "binary_digest": "sha256:5ba05a0cb4c1ab3b12dd3f414da192eda7576badae23302ed75307f6dce959af",
+ "binary_digest_scope": "CGO_ENABLED=0 go build -trimpath ./cmd/phebs at source_commit with go1.26.5 linux/amd64 on the test host; the released runtime is bound separately by its signed record.",
+ "qualification_artifact_id": null,
+ "qualification": "bounded-integration-tests (Ben's 2026-11-08 acceptance rule); no blind-label round",
+ "historical_measurement_scope": "No new extraction, measurement or truth population. The exact caller comparison (caller-comparison-v2) is unchanged; its evidence on each side is the released Thrift Caller Map's (phebs.thrift.caller.go). Only the released pair fence and admission are new.",
+ "current_checks": [
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./cmd/phebs",
+    "-count=1",
+    "-timeout=180s",
+    "-run",
+    "^Test(ThriftCallerComparison.*|ThriftCallerMap.*|CallerMapPackIdentityAndRecipeFrozen|CallerMapReleased.*|CallerComparisonReleasedAdmission|OperationImpactReleasedAdmission|ChangeImpactReleasedAdmission|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix|MergeExtractorsReleasedGovernsDomain|ReleaseLoadBindingsForDerivesEveryField|SignReleaseDerivesBindingsAndSelfVerifies)$"
+   ],
+   "pid": 987682,
+   "actual_wait": 0,
+   "seconds": 3.444862127304077,
+   "tests_passed": 101,
+   "tests_skipped": 0,
+   "log_sha256": "d4dc7861a5d4c7d7f7b87c6319fa48d1f033b2c66003d9cd1d992b1b45b46be0"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/api",
+    "-count=1",
+    "-timeout=180s",
+    "-run",
+    "^Test(Exact(Thrift)?CallerMap.*|Exact(Thrift)?CallerComparison.*|.*CallerComparison.*)$"
+   ],
+   "pid": 987764,
+   "actual_wait": 0,
+   "seconds": 7.52992582321167,
+   "tests_passed": 92,
+   "tests_skipped": 0,
+   "log_sha256": "64848bfa33b41548186a606b18dd19111d420c058ce36d968750a1cd2f098ba4"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/packrelease",
+    "-count=1",
+    "-timeout=90s"
+   ],
+   "pid": 988500,
+   "actual_wait": 0,
+   "seconds": 0.587885856628418,
+   "tests_passed": 106,
+   "tests_skipped": 0,
+   "log_sha256": "4487ccc1c6886f49be5d061cc4ade8994204a4c5ddc8c778e9c10a81d093fa8a"
+  }
+ ],
+ "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
+ "review": {
+  "source": "PHEBS-44 binds phebs.thrift.caller.comparison to compare_operation_callers@caller-comparison-v2+thrift-pairs, a claim with no extractor, admitted only beside the current released Thrift Caller Map recipe (thrift-contract@1.1.2 plus thrift-caller@1.6.0-released.1) as the running extractors. Admission matrix covers dark, joint, beside the Thrift Atlas, claim alone, Caller Map alone, beside only the protobuf Caller Map, beside the protobuf comparison family, revoked, suspended, expired, experimental Thrift as no released dependency, and an unsupported claim version.",
+  "evidence": "Under the protobuf claim, the Thrift claim and both, every one of the four protocol pairs is admitted or refused as specified; a refused pair answers 503 naming the supported pairs and reads no caller publication. A published thrift-caller generation with two declaration lineages is compared end to end over HTTP with the four neutral classes, per-side generations and declarations, Thrift-only samples and a readable citation; mixed and protobuf pairs are refused under the Thrift claim alone. A mutation that lets the protobuf claim admit Thrift pairs fails these tests.",
+  "security": "Existing authenticated visibility/source/generation/citation fences, signed binary/artifact bindings and identity checks retained. Mixed protobuf and Thrift pairs are never released; operation Impact keeps refusing non-protobuf endpoints.",
+  "steady_state_cost": "One map lookup and one protocol comparison per comparison request, and one extractor-version scan at startup. No new worker, cache, lock, child, timer, index or schema, and no ceiling raised."
+ },
+ "not_established": [
+  "Precision, recall or attribution accuracy of Thrift caller resolution or comparison",
+  "Migration completeness: old_only_evidence does not prove a caller still needs the old operation, and an empty side never proves caller absence",
+  "Mixed protobuf and Thrift (migration) comparison",
+  "thriftrw, YARPC, Kitex or fbthrift generated clients",
+  "Runtime or deployment usage, safe retirement",
+  "Linux capacity, scale or latency/throughput SLO"
+ ],
+ "expires_at": "2027-01-12T23:59:59Z"
+}
