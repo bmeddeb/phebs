@@ -20603,7 +20603,7 @@ numbers are the Kite PHEBS tracker items that mirror each lane.
 | Linux readiness and posture | T42.2v restored launch (MED-500) and T42.2n readiness (MED-501), both reduced to integration-test acceptance. T42.3 posture review (MED-504) follows. T42.2o freeze (MED-502) and separately authorized T42.2 execution (MED-503) are retired. | A restored-launch integration test on the exact head. T42.3 states posture without a scale or SLO claim unless one is measured. |
 | Installed managed SCIP | T45.7 / T45.10 (MED-505) closed 2026-11-24: materials rebuilt reproducibly on `dave` and all six neutral native acceptance cases pass. MED-695 is closed. | None for the neutral proof. Frozen public corpus cohorts, arbitrary repositories and scale stay unestablished; T45.10a presentation stays complete. |
 | Managed target qualification | T45.9 (MED-506). | Needs an eligible authorized 5,000-service/12-GB target and host. The T45.6 waiver and the generated-evidence STOP stay unpassed. |
-| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 were published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). T48.6 ships them on by default in [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) (2026-11-22, `6b4f52da`), signed with `phebs-release-2026-11`. | MED-513 installed and verified v0.3.0 on `dave` (2026-11-22). Atlas, Caller Map, caller comparison, operation impact, Kafka and WIRE all serve, and rollback by revocation and by `package_default: off` both work. [`v0.3.1`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.1) (2026-11-23, `6797ad14`) fixes the thriftrw plugin-header refusal (PHEBS-35), verified on `dave`. [`v0.3.2`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.2) (2026-11-23, `d4ee8078`) makes typed-scope reservations the default (PHEBS-36), and with the default config `dave` serves cadence's Thrift field references. [`v0.3.3`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.3) (2026-11-23, `932d49b1`) re-extracts after a same-version extractor fix and reports partition-served domains as served coverage (PHEBS-37), verified on `dave`. [`v0.3.4`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.4) (2026-11-23, `fb0b1265`) records why a released field recipe refused its input (PHEBS-38), verified on `dave`. [`v0.3.5`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.5) (2026-11-24, `ec712eb1`) gaps a conflicting Thrift file instead of refusing its repository (PHEBS-39), verified on `dave`. [`v0.3.6`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.6) (2026-11-24, `5e77d3e2`) gaps a `.proto` file with an extension group or a conflicting declaration instead of refusing its repository (PHEBS-40), verified on `dave`. [`v0.3.7`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.7) (2026-11-25, `7166ea7a`) releases proof-enriched compatibility and the field and proposed-change Contract Impact reports as the composed claim `phebs.protobuf.change-impact` (PHEBS-41), verified on `dave`. `package_default: off` keeps an install dark. The earliest record expiry is 2027-01-10. |
+| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 were published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). T48.6 ships them on by default in [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) (2026-11-22, `6b4f52da`), signed with `phebs-release-2026-11`. | MED-513 installed and verified v0.3.0 on `dave` (2026-11-22). Atlas, Caller Map, caller comparison, operation impact, Kafka and WIRE all serve, and rollback by revocation and by `package_default: off` both work. [`v0.3.1`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.1) (2026-11-23, `6797ad14`) fixes the thriftrw plugin-header refusal (PHEBS-35), verified on `dave`. [`v0.3.2`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.2) (2026-11-23, `d4ee8078`) makes typed-scope reservations the default (PHEBS-36), and with the default config `dave` serves cadence's Thrift field references. [`v0.3.3`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.3) (2026-11-23, `932d49b1`) re-extracts after a same-version extractor fix and reports partition-served domains as served coverage (PHEBS-37), verified on `dave`. [`v0.3.4`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.4) (2026-11-23, `fb0b1265`) records why a released field recipe refused its input (PHEBS-38), verified on `dave`. [`v0.3.5`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.5) (2026-11-24, `ec712eb1`) gaps a conflicting Thrift file instead of refusing its repository (PHEBS-39), verified on `dave`. [`v0.3.6`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.6) (2026-11-24, `5e77d3e2`) gaps a `.proto` file with an extension group or a conflicting declaration instead of refusing its repository (PHEBS-40), verified on `dave`. [`v0.3.7`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.7) (2026-11-25, `7166ea7a`) releases proof-enriched compatibility and the field and proposed-change Contract Impact reports as the composed claim `phebs.protobuf.change-impact` (PHEBS-41), verified on `dave`. [`v0.3.8`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.8) (2026-11-25, `9b73e548`) releases the Thrift Caller Map as `phebs.thrift.caller.go` (PHEBS-42), verified on `dave` against beltran/gohive. `package_default: off` keeps an install dark. The earliest record expiry is 2027-01-10. |
 | Reported limits (tracker only) | MED-487–493 from GitHub issue #163 (now closed). | Needs the affected production instance, repository and generation plus real publication and SCIP diagnostics. |
 | Next product program | Two-million-owner × 10,000-service convergence in [ROADMAP](./ROADMAP.md#next-two-million-owner-and-10000-service-convergence). Epics 25–28 stay unscheduled drafts. | Ticket-level scheduling is not yet selected. |
 
@@ -21294,20 +21294,23 @@ compatible, and a cadence Thrift field report returns 17 references. See the
 2026-11-25 PHEBS-41 ADR in `PLAN.md`. Receipts are in
 `~/phebs-instance/receipts/phebs41-2026-11-25/` on `dave`.
 
-*PHEBS-42 (2026-11-25, in progress):* the recipe pack `phebs.thrift.caller.go`
-1.0.0 releases the Thrift Caller Map: Go callers of Apache-Thrift-generated
-clients, attributed through the committed `.thrift` declaration and a committed
-`generated-from-snapshot.json` direct mapping, over the
-existing exact Caller Map routes and caller MCP tools. thriftrw/YARPC clients
-are not resolved, name-matching `thrift-consumer` stays experimental, and
-caller comparison and operation Impact stay protobuf-only. See the 2026-11-25
-PHEBS-42 ADR in `PLAN.md`.
-A trial on dave against beltran/gohive found that a generated Go package that
-differs from the Thrift scope (`hiveserver` vs `HiveServer`) dropped every call;
-the resolver catalog now binds Thrift symbols to the declared operation
-(resolver pack 1.3.0). Separately, a selected file over the 4 MiB per-blob
-bound refuses whole-repository observation and is stored as `unknown`; that
-predates PHEBS-42 and needs its own ticket.
+*PHEBS-42 closed (2026-11-25):* [`v0.3.8`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.8)
+was published from `9b73e548` and installed on `dave`. The recipe pack
+`phebs.thrift.caller.go` 1.0.0 releases the Thrift Caller Map: Go callers of
+Apache-Thrift-generated clients, attributed through the committed `.thrift`
+declaration and a committed `generated-from-snapshot.json` direct mapping, over
+the existing exact Caller Map routes and caller MCP tools. thriftrw/YARPC
+clients are not resolved, name-matching `thrift-consumer` stays experimental,
+and caller comparison and operation Impact stay protobuf-only.
+A first trial on dave against beltran/gohive found that a generated Go package
+that differs from the Thrift scope (`hiveserver` vs `HiveServer`) dropped every
+call. The resolver catalog now binds Thrift symbols to the declared operation
+(resolver pack 1.3.0). On the published release, gohive's Caller Map returns 11
+resolved rows across both lineages, each on the exact call line, and a citation
+reads. A selected file over the 4 MiB per-blob bound still refuses
+whole-repository observation and is stored as `unknown`; that predates PHEBS-42
+and is tracked as PHEBS-43. See the 2026-11-25 PHEBS-42 ADR in `PLAN.md`.
+Receipts are in `~/phebs-instance/receipts/phebs42-2026-11-25/` on `dave`.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 

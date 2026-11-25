@@ -84,6 +84,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-25, `7166ea7a`) releases proof-enriched compatibility and the
     field and proposed-change Contract Impact reports as the composed claim
     `phebs.protobuf.change-impact` (PHEBS-41), verified on `dave`.
+    [`v0.3.8`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.8)
+    (2026-11-25, `9b73e548`) releases the Thrift Caller Map as
+    `phebs.thrift.caller.go` (PHEBS-42), verified on `dave` against
+    beltran/gohive.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -19414,4 +19418,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       per-blob bound (gohive's 6 MB generated `hive_metastore.go`), and the
       refusal is stored as `unknown`: `blob_bytes` is not a valid dimension
       for the observation stage. It predates PHEBS-42; recorded as a Known
-      limit in the release notes and tracked separately.
+      limit in the release notes and tracked as PHEBS-43.
+  - **Verified (2026-11-25).** `v0.3.8` was published from `9b73e548`
+    (runtime sha256 `f29f64cf…`) and installed on `dave` from the downloaded
+    archive with an unchanged config. The 13 capabilities are unchanged; the
+    Thrift lane serves under `contract-caller-map`. Before the upgrade the
+    Thrift Caller Map answered 404.
+    - On beltran/gohive (real Apache Thrift 0.18.1 output, committed
+      mapping), Caller Map returns 11 `resolved_caller` rows across the root
+      and `v2/` lineages for `OpenSession`, `ExecuteStatement`,
+      `FetchResults`, `CloseOperation` and `GetOperationStatus`. Each one is
+      the exact call line, through a factory-built local client or a struct
+      field. `v2/` has no `GetOperationStatus` call and gets no row.
+    - A citation read returns the span `c.conn.client.ExecuteStatement` at
+      `hive.go:619`.
+    - Thrift caller comparison answers 503 and Thrift operation Impact 400,
+      both naming protobuf-only.
+    - The three MED-513 gRPC caller rows still resolve.
+    - The rebuild queued one resolver catalog rebuild per repository for
+      pack 1.3.0; gohive answered 56 s after restart. Every job succeeded.
+    - The full gohive repository is still refused by the 4 MiB per-blob
+      bound (PHEBS-43), so verification used a bounded copy.
+      `hive_metastore.thrift` declares nothing there because it uses an
+      absolute include.
+    - Receipts are in `~/phebs-instance/receipts/phebs42-2026-11-25/` on
+      `dave`.
