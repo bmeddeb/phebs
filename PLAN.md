@@ -95,6 +95,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-25, `be219529`) re-plans, once per start, a repository an older
     release refused for that reason (PHEBS-43), verified on `dave` against
     the full gohive repository.
+    [`v0.3.11`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.11)
+    (2026-11-25, `218a1562`) releases caller comparison for Thrift-to-Thrift
+    endpoint pairs as `phebs.thrift.caller.comparison` (PHEBS-44), verified on
+    `dave` against gohive's root and `v2/` TCLIService.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -19606,3 +19610,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     1.0.0 is new. The `thrift-caller-map` card's "caller comparison stays
     protobuf-only" line is left byte-identical (its digest is bound); the new
     card supersedes it for Thrift pairs only.
+  - **Verified (2026-11-25).** `v0.3.11` was published from `218a1562`
+    (runtime sha256 `dd5ce368…`) and installed on `dave` from the downloaded
+    archive with an unchanged config. The 13 capabilities are unchanged, every
+    pack was admitted, and no repository was re-planned by the upgrade.
+    - Comparing gohive's `thrift/HiveServer.thrift` TCLIService (old) with
+      `v2/thrift/HiveServer.thrift` (replacement) answered all 23 operations
+      `exact`: 9 `old_only_evidence` and 7 `new_only_evidence` occurrences
+      (the 16 resolved Caller Map rows) and 4 `unresolved` on `GetColumns`.
+      There is no `both_evidence`, since each copy of the client calls only
+      its own generated client. `ExecuteStatement` cites `hive.go:619` and
+      `v2/hive.go:483`, and the citation reads.
+    - Unit level answered every row `unresolved`: `dave` configures no
+      analysis units, so no caller carries a unit.
+    - A mixed Thrift→protobuf pair answered 503, and protobuf comparison
+      (t2114 `Search` → `SearchV2`) was unchanged. Every job succeeded and
+      there was no panic.
+    - Receipts are in `~/phebs-instance/receipts/phebs44-2026-11-25/` on
+      `dave`.
