@@ -2,12 +2,12 @@
  "schema": "phebs-final-release-validation-v1",
  "pack_id": "phebs.thrift.caller.go",
  "pack_claim_version": "1.0.0",
- "source_commit": "16ffb5bee8462ff7969e51791a04a1b45e490fe0",
- "binary_digest": "sha256:5b957bfac9190abb83c13dace3fbd5cea5a11bd4cf95a75a6ff81a1c10df20e9",
+ "source_commit": "8d72e82442e2068c7c9dbab273777383f0ea9de8",
+ "binary_digest": "sha256:94d11d27fb94b9a6259fc2225086d9215ca5e2e9e179b3e57d1ed3474550a14e",
  "binary_digest_scope": "CGO_ENABLED=0 go build -trimpath ./cmd/phebs at source_commit with go1.26.5 linux/amd64 on the test host; the released runtime is bound separately by its signed record.",
  "qualification_artifact_id": null,
  "qualification": "bounded-integration-tests (Ben's 2026-11-08 acceptance rule); no blind-label round",
- "historical_measurement_scope": "No new extraction, measurement or truth population. thrift-caller 1.6.0 is the reader shipped dark since T20.8; this release admits it unchanged under a distinct admission version.",
+ "historical_measurement_scope": "No new extraction, measurement or truth population. thrift-caller 1.6.0 is the reader shipped dark since T20.8, admitted unchanged under a distinct admission version; the resolver catalog's Thrift operation binding (pack 1.3.0) is the only algorithm change.",
  "current_checks": [
   {
    "command": [
@@ -20,12 +20,12 @@
     "-run",
     "^Test(ThriftCallerMap.*|CallerMapPackIdentityAndRecipeFrozen|CallerMapReleased.*|CallerComparisonReleasedAdmission|OperationImpactReleasedAdmission|ChangeImpactReleasedAdmission|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix|MergeExtractorsReleasedGovernsDomain|ReleaseLoadBindingsForDerivesEveryField|SignReleaseDerivesBindingsAndSelfVerifies)$"
    ],
-   "pid": 74339,
+   "pid": 238665,
    "actual_wait": 0,
-   "seconds": 3.031240224838257,
+   "seconds": 3.013411283493042,
    "tests_passed": 84,
    "tests_skipped": 0,
-   "log_sha256": "cd6a3fcdaa7f9c937b28e03feaa5a47a2b711334c9d2c695e9ada2c385e8ba3d"
+   "log_sha256": "26ab3478ddbe7b043f1730d4e7c0452df6f87be4412278dea74b8d5a2dc2e81e"
   },
   {
    "command": [
@@ -38,12 +38,12 @@
     "-run",
     "^Test(Exact(Thrift)?CallerMap.*|ExactCallerComparisonReleasedProtocolFence|.*OperationImpact.*)$"
    ],
-   "pid": 74413,
+   "pid": 238737,
    "actual_wait": 0,
-   "seconds": 3.646284818649292,
+   "seconds": 4.584938049316406,
    "tests_passed": 60,
    "tests_skipped": 0,
-   "log_sha256": "b425a6b4f755e98d947de19621e6d2c36c217b36bfc2fe4c53d875ccf0727652"
+   "log_sha256": "c8ad312e2f209027a14f6fa4f5a54f509a9ad4312363d1384aef4a445fadf4f8"
   },
   {
    "command": [
@@ -56,12 +56,12 @@
     "-run",
     "^Test(T2114CommittedBundleProducesDeclarationAndCallerLineage|T208TypedCallersPublishThroughTrustedWorker|T209SyntaxFallbackPublishesThroughTrustedWorker)$"
    ],
-   "pid": 74926,
+   "pid": 239317,
    "actual_wait": 0,
-   "seconds": 1.1207079887390137,
+   "seconds": 1.0921618938446045,
    "tests_passed": 5,
    "tests_skipped": 0,
-   "log_sha256": "020f19ad4978cae5b301891082387f2cc120f831e017d84e6b2dde2b09c6a677"
+   "log_sha256": "524e3798e5424aeb76097a9f2976c599ca2bd1f27154f048c6c60cc7ee3f189d"
   },
   {
    "command": [
@@ -72,12 +72,12 @@
     "-count=1",
     "-timeout=120s"
    ],
-   "pid": 75081,
+   "pid": 239473,
    "actual_wait": 0,
-   "seconds": 0.8521366119384766,
+   "seconds": 0.8381941318511963,
    "tests_passed": 21,
    "tests_skipped": 0,
-   "log_sha256": "0dee8cd4ceccee39da2a2bc4bcae9ac3beffb20a5c3fe8a437fc4d828eefbb6d"
+   "log_sha256": "19d0254ed2728b8dd599d808de746fc4b686881ef0c0b4eed9409c28562572b9"
   },
   {
    "command": [
@@ -88,20 +88,36 @@
     "-count=1",
     "-timeout=90s"
    ],
-   "pid": 75152,
+   "pid": 239545,
    "actual_wait": 0,
-   "seconds": 0.3969104290008545,
+   "seconds": 0.3611602783203125,
    "tests_passed": 106,
    "tests_skipped": 0,
-   "log_sha256": "5babf4f91131175eeaa0eb8552c10a388f527e1084e92072e1f48deabc88ae7f"
+   "log_sha256": "1c0c949d6a1afd213464a63538e3c04d9e82ea1fa3d81896042df358ad45e997"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/resolvermaterialize",
+    "-count=1",
+    "-timeout=300s"
+   ],
+   "pid": 239605,
+   "actual_wait": 0,
+   "seconds": 4.9100425243377686,
+   "tests_passed": 178,
+   "tests_skipped": 0,
+   "log_sha256": "fe1f54ff96cec88cfb9ee7508be17c4007ce28db87f18ab9a85a95301be21d9b"
   }
  ],
  "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
  "review": {
   "source": "PHEBS-42 binds phebs.thrift.caller.go to thrift-contract@1.1.2 plus thrift-caller@1.6.0-released.1. Admission matrix covers dark, alone, beside the protobuf caller family, beside the Thrift Atlas, revoked, suspended, expired and an unsupported claim version; name-matching consumer domains are never registered.",
-  "evidence": "Dark and released Thrift caller facts are byte-identical over the t201 profile while candidate policy, caller generation and extractor-set digests change. A published thrift-caller generation is served end to end by the exact Caller Map with resolved rows and a bound citation. The T21.14 committed fixture joins a Thrift caller to its declaration lineage.",
+  "evidence": "Dark and released Thrift caller facts are byte-identical over the t201 profile while candidate policy, caller generation and extractor-set digests change. A published thrift-caller generation is served end to end by the exact Caller Map with resolved rows and a bound citation. The T21.14 committed fixture joins a Thrift caller to its declaration lineage. PHEBS-42 verification on dave against beltran/gohive found generated Thrift symbols spelled from the Go package (/hiveserver.TCLIService/...) never met the declared /HiveServer.TCLIService/... operations; the resolver catalog (pack 1.3.0) now binds each resolved Thrift symbol to the operation its mapped declaration declares for the same service and method, and an undeclared method abstains as operation_not_declared. TestThriftGeneratedSymbolBindsToMappedDeclarationSpelling drives materialization, the direct resolver and the caller scan in gohive's shape and fails without the binding.",
   "security": "Existing authenticated visibility/source/generation/citation fences, signed binary/artifact bindings and identity checks retained. Caller comparison and operation Impact keep refusing non-protobuf endpoints under their released claims.",
-  "steady_state_cost": "A dark install registers nothing new. A released install adds one extractor pair to the existing candidate, resolver, caller and publication pipeline; no new worker, cache, lock, child, timer, index or schema, and no ceiling raised."
+  "steady_state_cost": "A dark install registers nothing new. A released install adds one extractor pair to the existing candidate, resolver, caller and publication pipeline; no new worker, cache, lock, child, timer, index or schema, and no ceiling raised. The resolver keeps, for Thrift only, the declared operations it already reads, keyed by lineage and Service/method, under a 16 MiB MaxDeclarationOperationBytes budget; the pack version bump re-materializes each resolver catalog once."
  },
  "not_established": [
   "Precision, recall or attribution accuracy of Thrift caller resolution",
