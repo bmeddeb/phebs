@@ -19315,3 +19315,6 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     claim-version check. Requests use the existing compatibility checker,
     bounded proof builder and bundle store; no new worker, cache, lock, child,
     timer, index or schema. A dark install registers nothing new.
+  - **Release.** Ships as `v0.3.7` with thirteen signed records. The twelve
+    existing pack templates take a patch bump for the rebind; no claim, card,
+    reader version, approval or expiry changes. `change-impact` 1.0.0 is new.
