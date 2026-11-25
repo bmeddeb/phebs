@@ -39,6 +39,33 @@ const (
 	exactDeclarationRun  = "run-exact-proto-declarations"
 )
 
+// exactCallerProtocol is the protocol-specific part of the exact Caller Map
+// fixture. The publication, reader and service path is shared, so a Thrift
+// row proves the same exact path a protobuf row does.
+type exactCallerProtocol struct {
+	protocol, detailProtocol, callerDomain, declarationDomain string
+	resolverPack, idlPath, idlBody, operation, operationSchema string
+	adapter                                                   sdk.Extractor
+}
+
+var protobufExactCaller = exactCallerProtocol{
+	protocol: "protobuf", detailProtocol: "grpc", callerDomain: "grpc-caller",
+	declarationDomain: "proto-contract", resolverPack: resolvermaterialize.GRPCGeneratedPackName,
+	idlPath: "idl/orders.proto", idlBody: "service Orders {}\n",
+	operation: exactCallerOperation, operationSchema: "proto-operation-detail-v1",
+	adapter: gocaller.NewGRPC(),
+}
+
+// thriftExactCaller is the PHEBS-42 Thrift lane: an Apache Thrift generated
+// client call attributed through a thrift-contract declaration.
+var thriftExactCaller = exactCallerProtocol{
+	protocol: "thrift", detailProtocol: "thrift", callerDomain: "thrift-caller",
+	declarationDomain: "thrift-contract", resolverPack: resolvermaterialize.ThriftGeneratedPackName,
+	idlPath: "idl/orders.thrift", idlBody: "service Orders {}\n",
+	operation: "/orders.Orders/get", operationSchema: "thrift-operation-detail-v1",
+	adapter: gocaller.NewThrift(),
+}
+
 type exactCallerAPIStore struct {
 	*proofAPIStore
 
@@ -341,6 +368,20 @@ func newExactCallerAPIFixtureConfigured(
 	mutateDetail func(map[string]any),
 	mutateRecord func(*callerleaf.Record),
 ) *exactCallerAPIFixture {
+	return newExactCallerAPIFixtureFor(
+		t, recordCount, repositoryName, dataDir, mutateDetail, mutateRecord, protobufExactCaller,
+	)
+}
+
+func newExactCallerAPIFixtureFor(
+	t *testing.T,
+	recordCount int,
+	repositoryName string,
+	dataDir string,
+	mutateDetail func(map[string]any),
+	mutateRecord func(*callerleaf.Record),
+	lane exactCallerProtocol,
+) *exactCallerAPIFixture {
 	t.Helper()
 	if recordCount < 1 || recordCount > callerleaf.MaxResultRecordsPerPair {
 		t.Fatalf("invalid exact caller fixture record count %d", recordCount)
@@ -350,8 +391,8 @@ func newExactCallerAPIFixtureConfigured(
 		principal: "user:exact-member",
 		visible:   map[string]bool{exactCallerRepository: true},
 		query: api.CallerMapQuery{Endpoint: api.CallerMapEndpoint{
-			Protocol: "protobuf", Repository: exactCallerRepository,
-			Lineage: exactCallerLineage, Operation: exactCallerOperation,
+			Protocol: lane.protocol, Repository: exactCallerRepository,
+			Lineage: exactCallerLineage, Operation: lane.operation,
 		}},
 	}
 
@@ -376,8 +417,8 @@ func newExactCallerAPIFixtureConfigured(
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(
-		filepath.Join(origin, "idl", "orders.proto"),
-		[]byte("service Orders {}\n"), 0o644,
+		filepath.Join(origin, filepath.FromSlash(lane.idlPath)),
+		[]byte(lane.idlBody), 0o644,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +448,7 @@ func newExactCallerAPIFixtureConfigured(
 	resolverPointer := store.ResolverCatalogPublication{
 		Repository: fixture.repository, HeadCommit: fixture.commit,
 		Declarations: []store.ResolverCatalogDeclarationPublication{{
-			Domain: "proto-contract", RunID: exactDeclarationRun,
+			Domain: lane.declarationDomain, RunID: exactDeclarationRun,
 			GenerationDigest: digest('d'),
 		}},
 		DeclarationSetDigest:    digest('e'),
@@ -415,7 +456,7 @@ func newExactCallerAPIFixtureConfigured(
 		SourceLanePolicy:        "candidate-source-lane-base-v1",
 		ResolverPacks: []store.ResolverCatalogPack{
 			{Name: resolvermaterialize.GoModulePackName, Version: resolvermaterialize.PackVersion},
-			{Name: resolvermaterialize.GRPCGeneratedPackName, Version: resolvermaterialize.PackVersion},
+			{Name: lane.resolverPack, Version: resolvermaterialize.PackVersion},
 		},
 		ResolverPackSetDigest: digest('f'),
 		CatalogPolicyDigest:   digest('1'),
@@ -427,7 +468,7 @@ func newExactCallerAPIFixtureConfigured(
 		WriterSchema:          resolvercatalogid.WriterSchema,
 		PublishedAt:           time.Unix(2, 0).UTC(),
 	}
-	adapters, err := callerexecute.NewRegistry([]sdk.Extractor{gocaller.NewGRPC()})
+	adapters, err := callerexecute.NewRegistry([]sdk.Extractor{lane.adapter})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -446,7 +487,7 @@ func newExactCallerAPIFixtureConfigured(
 		t.Fatal(err)
 	}
 	pair, err := callerleaf.NewPairIdentity(
-		semantic, "grpc-caller", "1.6.0", callerleaf.LeafDescriptor{
+		semantic, lane.callerDomain, lane.adapter.Version(), callerleaf.LeafDescriptor{
 			Name: "candidate-caller-000000.ndjson", Ordinal: 0,
 			Prefix: "00", PrefixBits: 2, RecordCount: 1,
 			DeclaredBytes: int64(len(fixture.source)),
@@ -464,7 +505,7 @@ func newExactCallerAPIFixtureConfigured(
 	t.Cleanup(func() { _ = stage.Discard() })
 	detailInput := map[string]any{
 		"schema": "go-caller-detail-v1", "resolution": "direct-syntax",
-		"protocol": "grpc", "resolver_catalog_digest": resolverPointer.AuthorityDigest,
+		"protocol": lane.detailProtocol, "resolver_catalog_digest": resolverPointer.AuthorityDigest,
 		"unit_state": "resolved",
 		"unit_candidates": []map[string]any{{
 			"id":               "au_" + strings.Repeat("a", 64),
@@ -496,7 +537,7 @@ func newExactCallerAPIFixtureConfigured(
 				Assertion: sdk.AssertionInput{
 					Predicate: "CALLS_OPERATION",
 					Subject:   "src/calls.go:" + strconv.Itoa(start) + "-" + strconv.Itoa(end),
-					Object:    exactCallerOperation, Lineage: exactCallerLineage,
+					Object:    lane.operation, Lineage: exactCallerLineage,
 					Tier: store.TierHeuristic, CodeRole: "production",
 					Detail: string(detail),
 				},
@@ -602,9 +643,9 @@ func newExactCallerAPIFixtureConfigured(
 	}
 	declaration, resolution := catalogAssertion(
 		fixture.repository, exactDeclarationRun, "exact-declaration",
-		"DECLARES_OPERATION", "idl/orders.proto",
-		strings.TrimPrefix(exactCallerOperation, "/"), exactCallerLineage,
-		`{"schema":"proto-operation-detail-v1"}`,
+		"DECLARES_OPERATION", lane.idlPath,
+		strings.TrimPrefix(lane.operation, "/"), exactCallerLineage,
+		`{"schema":"`+lane.operationSchema+`"}`,
 	)
 	resolution.Occurrences[0].Commit = fixture.commit
 	putCatalogAssertion(evidence, declaration, resolution)
@@ -1409,6 +1450,47 @@ func TestExactCallerMapHTTPExposesExactProgressAndCitationRoutes(t *testing.T) {
 	}
 	if strings.Contains(body, "call00001") {
 		t.Fatalf("HTTP citation leaked unrelated source: %s", body)
+	}
+}
+
+// TestExactThriftCallerMapServesResolvedRowsAndCitations is the PHEBS-42
+// end-to-end check: a published thrift-caller generation is served by the
+// same exact Caller Map, progress and citation routes as the protobuf lane.
+func TestExactThriftCallerMapServesResolvedRowsAndCitations(t *testing.T) {
+	fixture := newExactCallerAPIFixtureFor(
+		t, 2, exactCallerRepository, t.TempDir(), nil, nil, thriftExactCaller,
+	)
+	options := fixture.serviceOptions()
+	options.CallerMap = fixture.service
+	handler := api.New(options)
+	values := url.Values{
+		"protocol": {"thrift"}, "repository": {fixture.repository},
+		"lineage": {exactCallerLineage}, "operation": {thriftExactCaller.operation},
+		"page_size": {"2"},
+	}
+	var page api.CallerMapPage
+	code, body := catalogHTTP(t, handler, "/api/contract_callers?"+values.Encode(), &page)
+	if code != http.StatusOK || len(page.Rows) != 2 {
+		t.Fatalf("HTTP Thrift exact page = %d %s / %+v", code, body, page)
+	}
+	for _, row := range page.Rows {
+		if row.Protocol != "thrift" || row.Classification != "resolved_caller" ||
+			row.Operation != thriftExactCaller.operation || row.DeclarationLineage != exactCallerLineage {
+			t.Fatalf("Thrift exact row = %+v", row)
+		}
+	}
+	var citation api.CallerMapCitation
+	code, body = catalogHTTP(t, handler, "/api/contract_callers/citation?citation="+
+		url.QueryEscape(page.Rows[0].Source.Citation), &citation)
+	if code != http.StatusOK || !strings.HasPrefix(citation.Content, "call0000") {
+		t.Fatalf("HTTP Thrift exact citation = %d %s / %+v", code, body, citation)
+	}
+	// A protobuf query over the same repository names no Thrift caller row.
+	values.Set("protocol", "protobuf")
+	values.Set("operation", exactCallerOperation)
+	var protobuf api.CallerMapPage
+	if code, _ := catalogHTTP(t, handler, "/api/contract_callers?"+values.Encode(), &protobuf); code == http.StatusOK && len(protobuf.Rows) != 0 {
+		t.Fatalf("protobuf query served Thrift caller rows: %+v", protobuf.Rows)
 	}
 }
 

@@ -21294,6 +21294,14 @@ compatible, and a cadence Thrift field report returns 17 references. See the
 2026-11-25 PHEBS-41 ADR in `PLAN.md`. Receipts are in
 `~/phebs-instance/receipts/phebs41-2026-11-25/` on `dave`.
 
+*PHEBS-42 (2026-11-25, in progress):* the recipe pack `phebs.thrift.caller.go`
+1.0.0 releases the Thrift Caller Map: Go callers of Apache-Thrift-generated
+clients, attributed through the committed `.thrift` declaration, over the
+existing exact Caller Map routes and caller MCP tools. thriftrw/YARPC clients
+are not resolved, name-matching `thrift-consumer` stays experimental, and
+caller comparison and operation Impact stay protobuf-only. See the 2026-11-25
+PHEBS-42 ADR in `PLAN.md`.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

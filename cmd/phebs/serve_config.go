@@ -160,6 +160,7 @@ var packRecipes = map[string]func() []extract.Extractor{
 	kafkaProducerPackID:     kafkaProducerRecipe,    // T55.3: bound beside its first signed record
 	kafkaConsumerPackID:     kafkaConsumerRecipe,    // T56.3: bound beside its first signed record
 	thriftContractPackID:    thriftContractRecipe,   // T49.3: bound beside its first signed record
+	thriftCallerMapPackID:   thriftCallerMapRecipe,  // PHEBS-42: bound beside its first signed record
 }
 
 // releasedClaims is the fixed in-tree registry of released product claims that
@@ -344,6 +345,12 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 				return nil, nil, fmt.Errorf("unsupported change Impact claim version %q", record.PackClaimVersion)
 			}
 		}
+		if packID == thriftCallerMapPackID {
+			record, _ := selection.Released(packID)
+			if record.PackClaimVersion != thriftCallerMapClaimVersion {
+				return nil, nil, fmt.Errorf("unsupported Thrift Caller Map claim version %q", record.PackClaimVersion)
+			}
+		}
 		if packID == protobufFieldPackID {
 			record, _ := selection.Released(packID)
 			if record.PackClaimVersion != protobufFieldClaimVersion {
@@ -511,3 +518,29 @@ func callerMapRecipe() []extract.Extractor {
 type releasedGRPCCaller struct{ extract.Extractor }
 
 func (releasedGRPCCaller) Version() string { return "1.6.0-released.1" }
+
+// thriftCallerMapPackID is the PHEBS-42 Thrift Caller Map: Go callers of
+// Apache-Thrift-compiler-generated clients, attributed through the released
+// Thrift declaration lineage. It mirrors callerMapPackID for the Thrift lane.
+// thriftrw/YARPC clients are outside its scope, and caller comparison and
+// operation Impact stay protobuf-only under their own released claims.
+const (
+	thriftCallerMapPackID       = "phebs.thrift.caller.go"
+	thriftCallerMapClaimVersion = "1.0.0"
+)
+
+// thriftCallerMapRecipe carries the Thrift declaration extractor for the same
+// reason callerMapRecipe carries protodecl: resolved callers need the
+// repository-committed declaration lineage. The caller algorithm and source
+// rules are gocaller 1.6.0 unchanged; the distinct admission version keeps
+// experimental Thrift caller generations from being reused as released ones.
+func thriftCallerMapRecipe() []extract.Extractor {
+	return []extract.Extractor{
+		thriftdecl.New(),
+		releasedThriftCaller{gocaller.NewThrift()},
+	}
+}
+
+type releasedThriftCaller struct{ extract.Extractor }
+
+func (releasedThriftCaller) Version() string { return "1.6.0-released.1" }

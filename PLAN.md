@@ -19343,3 +19343,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       `t225` fixtures.
     - Receipts are in `~/phebs-instance/receipts/phebs41-2026-11-25/` on
       `dave`.
+- **2026-11-25 — PHEBS-42 releases the Thrift Caller Map (Ben-approved design).**
+  Goal: turn the last dark caller lane into a released product surface. The
+  typed `thrift-caller` reader (T20.8, 1.6.0) and the exact Caller Map path
+  already handled `protocol=thrift`; only a released recipe was missing, so it
+  served only under `experimental.provisional_thrift_extraction`.
+  - **Decision.** A recipe pack, `phebs.thrift.caller.go` 1.0.0, the Thrift twin
+    of `phebs.grpc.caller.go`: `thrift-contract@1.1.2` plus
+    `thrift-caller@1.6.0-released.1`. The algorithm is unchanged; the distinct
+    admission version changes candidate and caller generation identities, so
+    experimental Thrift caller publications are fenced and replaced through
+    startup reconciliation.
+  - **Scope.** Go callers of Apache-Thrift-compiler-generated clients,
+    attributed through the repository-committed `.thrift` declaration, over the
+    existing exact Caller Map, progress and citation routes, the two caller MCP
+    tools and `contract-caller-map`. thriftrw, YARPC, Kitex and fbthrift clients
+    are not resolved. Name-matching `thrift-consumer` stays experimental (T58
+    NO-GO). Caller comparison and operation Impact stay protobuf-only: their
+    released services already refuse non-protobuf endpoints.
+  - **Acceptance.** Bounded integration tests and the three gates (2026-11-08
+    rule):
+    - the admission matrix (alone, beside the protobuf family, beside the
+      Thrift Atlas, revoked, suspended, expired, unsupported claim version);
+    - byte-identical dark and released Thrift caller facts with changed
+      generation identities;
+    - a published `thrift-caller` generation served end to end by the exact
+      Caller Map with resolved rows and a bound citation;
+    - the T21.14 committed fixture's Thrift caller lineage join.
+  - **Not established.** No precision, recall, completeness, runtime-use or
+    scale claim; empty results never prove absence. Expiry is 2027-01-12, the
+    Thrift declaration claim's.
+  - **Steady-state cost.** A dark install registers nothing new. A released
+    install adds one extractor pair to the existing candidate, resolver, caller
+    and publication pipeline, which already runs the protobuf lane; no new
+    worker, cache, lock, child, timer, index or schema, and no ceiling raised.
+  - **Release.** Ships as `v0.3.8` with fourteen signed records. The thirteen
+    existing templates take a patch bump for the rebind; no claim, card, reader
+    version, approval or expiry changes. `thrift-caller-map` 1.0.0 is new.
