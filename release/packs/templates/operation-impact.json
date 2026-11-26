@@ -1,7 +1,7 @@
 {
   "release_schema_version": "1.0",
-  "release_id": "rel-phebs.contract.impact.operation-1.0.13",
-  "release_version": "1.0.13",
+  "release_id": "rel-phebs.contract.impact.operation-1.0.14",
+  "release_version": "1.0.14",
   "pack_id": "phebs.contract.impact.operation",
   "pack_claim_version": "1.0.0",
   "card": {
