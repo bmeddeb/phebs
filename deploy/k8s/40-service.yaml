@@ -1,0 +1,21 @@
+# Direct NodePort access: http://<any-node-ip>:30700.
+# The NodePort range is 30000-32767; 30700 mirrors phebs' default port 3070 —
+# check for collisions with other NodePorts before changing it.
+# With plaintext HTTP access through the NodePort, auth.cookie_secure in the
+# ConfigMap must be false.
+apiVersion: v1
+kind: Service
+metadata:
+  name: phebs
+  namespace: phebs
+  labels:
+    app: phebs
+spec:
+  type: NodePort
+  selector:
+    app: phebs
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: 30700

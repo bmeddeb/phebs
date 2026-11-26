@@ -1,0 +1,61 @@
+# phebs runtime configuration. Secret fields are referenced as ${ENV} and
+# injected through environment variables — never put plaintext secrets here.
+# Unknown fields fail startup; the full set of options lives in
+# docs/config.example.yaml in the phebs repository.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phebs-config
+  namespace: phebs
+data:
+  phebs.yaml: |
+    server:
+      # Must listen on all addresses inside the container; the cluster reaches
+      # the server through Service phebs on port 80.
+      addr: "0.0.0.0:3070"
+      # Where the persistent volume is mounted. Authentication state (users,
+      # API keys, sessions) lives here; losing it means re-registering an admin.
+      data_dir: "/data"
+
+    auth:
+      # Must be false for direct plaintext-HTTP access through a NodePort,
+      # otherwise session cookies carrying the Secure flag cannot log in from
+      # a non-HTTPS page. The cost: session cookies and API keys travel in
+      # cleartext — do not expose that port beyond a trusted network.
+      # If you switch to port-forward or a TLS-terminating ingress, set this
+      # back to true.
+      cookie_secure: false
+      # Leave empty when reaching the Service directly (no reverse proxy in
+      # front); login rate limits are then counted per client IP.
+      trusted_proxies: []
+      # With no bootstrap_user/OIDC configured, the first phebs start prints a
+      # one-time first-run setup token in the logs; paste it into the first-run
+      # form in the UI to create the admin account:
+      #   kubectl -n phebs logs deploy/phebs -c phebs | grep 'setup token'
+      # (A fresh token is generated on every restart; the line disappears
+      # once an admin exists.)
+
+    # Repositories to index. Append entries to the list to add more.
+    # For an HTTP(S) Git server that needs credentials, add:
+    #   http_auth: {username: "${GIT_HTTP_USERNAME}", password: "${GIT_HTTP_PASSWORD}"}
+    # and inject those two environment variables from a Secret in the
+    # Deployment (see 30-deployment.yaml).
+    # After removing a connection, the old repository keeps its mirror and
+    # index with an orphaned marker (sync.cleanup_orphans defaults to false);
+    # to delete its data for good, temporarily set sync.cleanup_orphans to
+    # true and restart, then set it back.
+    connections:
+      - name: zoekt
+        type: git
+        url: https://github.com/sourcegraph/zoekt.git
+    # Extra branches/tags to index on top of HEAD: full repository name →
+    # short selector used in queries → full Git ref. HEAD (the default
+    # branch) is always implied; at most seven extras per repository.
+    # Changes take effect on the next sync/index run. Query with
+    # rev:<selector>; both the selector and the ref are case-sensitive.
+    #revisions:
+    #  github.com/sourcegraph/zoekt:
+    #    some-branch: refs/heads/some-branch
+
+    sync:
+      cleanup_orphans: false
