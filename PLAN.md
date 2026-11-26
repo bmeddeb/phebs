@@ -103,6 +103,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-26, `6e1cc89b`) releases operation Impact for Thrift endpoints as
     `phebs.thrift.impact.operation` (PHEBS-45), verified on `dave` against
     gohive TCLIService.
+    [`v0.3.13`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.13)
+    (2026-11-26, `8e0ac6b2`) resolves Thrift callers of thriftrw/YARPC clients
+    through hash-verified thriftrw provenance (PHEBS-46), verified on `dave`
+    against yarpc-go.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -19785,3 +19789,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     pre-filter; content decides), one parse of each referenced thriftrw module
     file, and one content read per candidate `.thrift` file, all inside the
     existing blob read and byte budgets. Nothing per query or sync tick.
+  - **Implementation notes.** The parent package is the one the client's
+    `<Service>_<Method>_Helper.Args` calls go through, not merely an import:
+    real clients also import thriftrw packages for shared types (yarpc-go's
+    `WITHSERVICES`). Without a module the Thrift method spellings are unknown,
+    so the client is not described rather than attached to an invented
+    operation; its audit row records `thriftrw_module_missing`.
+  - **Verified (2026-11-26).** `v0.3.13` was published from `8e0ac6b2`
+    (runtime sha256 `f6762f42…`) and installed on `dave`. A new fixture,
+    yarpc/yarpc-go at `7000bc61` with no generated-from snapshot, was indexed
+    on `v0.3.12` first: 108 Thrift operations in 33 services and no caller row
+    for any of them.
+    - After the upgrade every catalog was rebuilt at pack 1.4.0. All 108
+      operations answered `exact`, with 8 `resolved_caller` rows on 7
+      operations: exactly the hand-written YARPC call sites in
+      `internal/crossdock/client` (echo, headers, tchserver, oneway) and
+      `internal/examples` (hello, keyvalue get/set, oneway sink). The citation
+      reads `client.Echo` at `thrift.go:54`. Two `extractor_abstention` rows
+      come from generated fx/test helpers.
+    - Thrift operation Impact served `/echo.Echo/echo` (3 rows), and Thrift
+      comparison `/echo.Echo/echo` → `/echo.Hello/echo` answered 3
+      old-only and 1 new-only.
+    - gohive kept exactly 16 resolved Apache Thrift callers, the t2114 gRPC
+      callers still resolve, all 12 repositories kept their observation
+      generations, and every job succeeded.
+    - Receipts are in `~/phebs-instance/receipts/phebs46-2026-11-26/` on
+      `dave`.
