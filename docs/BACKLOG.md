@@ -21350,12 +21350,14 @@ answered 400. The release also carries two store robustness fixes found by the
 gates. See the 2026-11-26 PHEBS-45 ADRs in `PLAN.md`. Receipts are in
 `~/phebs-instance/receipts/phebs45-2026-11-26/` on `dave`.
 
-*PHEBS-46 (2026-11-26, needs Ben):* Thrift Caller Map for thriftrw/YARPC
-generated Go clients. The caller adapter skips YARPC clients at three checks,
-and no repository on `dave` commits both the `.thrift` IDL and a
-generated-to-declaration mapping (cadence's IDL is an unpopulated submodule).
-The Kite item records three attribution options; hash-verified thriftrw
-`ThriftModule` provenance is recommended. Not started.
+*PHEBS-46 (2026-11-26, in progress; Ben chose option B):* the Thrift Caller
+Map resolves Go callers of thriftrw + `thriftrw-plugin-yarpc` generated
+clients. The resolver catalog (pack 1.4.0) relates a YARPC client to its
+`.thrift` file only through thriftrw's embedded `ThriftModule` provenance,
+verified by content SHA-1, with no mapping file. The Thrift Caller Map, Thrift
+caller comparison and Thrift operation Impact claims move to 1.1.0. Verified
+against yarpc-go (16 thriftrw modules, each matching one committed `.thrift`).
+See the 2026-11-26 PHEBS-46 ADR in `PLAN.md`.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 

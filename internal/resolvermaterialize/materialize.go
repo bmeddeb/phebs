@@ -82,6 +82,10 @@ type generatedPlan struct {
 	parsedSymbols    map[string]generatedSymbolParse
 	blobs            *blobBudget
 	units            *consumerUnitPlan
+	// PHEBS-46: the manifest the plan was discovered from, and the
+	// thriftrw-plugin-yarpc client candidates found in the caller view.
+	manifest           extract.CandidateManifest
+	thriftRWCandidates []extract.CandidateManifestFile
 }
 
 type generatedSymbolParse struct {
@@ -357,6 +361,7 @@ func discoverGeneratedInputs(
 		modules:         make(map[string]string),
 		parsedSymbols:   make(map[string]generatedSymbolParse),
 		blobs:           budget,
+		manifest:        request.Manifest,
 	}
 	fixed := make(map[string]extract.CandidateManifestFile, 3)
 	caller := request.Registry.adapters[0]
@@ -595,6 +600,12 @@ func emitModulesAndValidateGeneratedPaths(
 			if err := plan.units.observe(file, plan); err != nil {
 				return err
 			}
+			if isThriftRWClientCandidate(file) {
+				if err := validateInputFile(file); err != nil {
+					return err
+				}
+				plan.thriftRWCandidates = append(plan.thriftRWCandidates, file)
+			}
 			if file.SourceLane == candidate.SourceLaneBase &&
 				strings.HasSuffix(file.Path, ".go") {
 				if _, wanted := plan.generatedPaths[file.Path]; wanted {
@@ -830,15 +841,19 @@ func emitGeneratedAttribution(
 	if err := writeJSON(write, status); err != nil {
 		return err
 	}
-	if status.State != StateResolved || plan.generated == nil {
-		return nil
+	if status.State == StateResolved && plan.generated != nil {
+		if err := emitGeneratedMappings(
+			ctx, current, plan, targets, budget, write,
+		); err != nil {
+			return err
+		}
+		if err := emitGeneratorInvocations(ctx, current, plan, targets, write); err != nil {
+			return err
+		}
 	}
-	if err := emitGeneratedMappings(
-		ctx, current, plan, targets, budget, write,
-	); err != nil {
-		return err
-	}
-	return emitGeneratorInvocations(ctx, current, plan, targets, write)
+	// PHEBS-46: hash-verified thriftrw provenance needs no snapshot; an
+	// explicit mapping for the same file still governs it.
+	return emitThriftRWProvenance(ctx, current, plan, targets, budget, write)
 }
 
 type mappingKey struct {

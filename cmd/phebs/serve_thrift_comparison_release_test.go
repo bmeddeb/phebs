@@ -13,7 +13,7 @@ import (
 // TestThriftCallerComparisonIdentityFrozen pins the PHEBS-44 tuple: the pack
 // identity, its claim version and the implementation identity a release binds.
 func TestThriftCallerComparisonIdentityFrozen(t *testing.T) {
-	if thriftCallerComparisonPackID != "phebs.thrift.caller.comparison" || thriftCallerComparisonClaimVersion != "1.0.0" {
+	if thriftCallerComparisonPackID != "phebs.thrift.caller.comparison" || thriftCallerComparisonClaimVersion != "1.1.0" {
 		t.Fatalf("Thrift caller comparison identity = %s %s", thriftCallerComparisonPackID, thriftCallerComparisonClaimVersion)
 	}
 	want := "compare_operation_callers@" + api.CallerComparisonSchemaVersion + "+thrift-pairs"

@@ -90,6 +90,20 @@ func writeStatusRecord(t *testing.T, dir, packID, keyID string, status string) (
 // dir after shape adjusts it, and returns the base64 public key that admits it
 // and the record. shape may change any field Sign still accepts, such as the
 // lifecycle status, the validation clock or the implementation identity.
+// testClaimVersion is the claim version a shaped test record carries: the
+// version each pack's admission currently supports.
+func testClaimVersion(packID string) string {
+	switch packID {
+	case thriftCallerMapPackID:
+		return thriftCallerMapClaimVersion
+	case thriftCallerComparisonPackID:
+		return thriftCallerComparisonClaimVersion
+	case thriftOperationImpactPackID:
+		return thriftOperationImpactClaimVersion
+	}
+	return "1.0.0"
+}
+
 func writeShapedRecord(
 	t *testing.T, dir, packID, keyID string, shape func(*packrelease.PackRelease),
 ) (string, *packrelease.PackRelease) {
@@ -103,7 +117,7 @@ func writeShapedRecord(
 		ReleaseID:            "rel-" + packID,
 		ReleaseVersion:       "1.0.0",
 		PackID:               packID,
-		PackClaimVersion:     "1.0.0",
+		PackClaimVersion:     testClaimVersion(packID),
 		Card:                 packrelease.ArtifactRef{ArtifactID: "card." + packID, Digest: testReleaseDigest("card" + packID)},
 		Manifest:             packrelease.ArtifactRef{ArtifactID: "manifest." + packID, Digest: testReleaseDigest("manifest" + packID)},
 		Implementation: packrelease.Implementation{

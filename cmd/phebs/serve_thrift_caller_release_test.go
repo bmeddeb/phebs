@@ -23,7 +23,7 @@ import (
 // pack identity, its claim version, and the recipe that carries the Thrift
 // declaration extractor beside the released Thrift caller admission.
 func TestThriftCallerMapPackIdentityAndRecipeFrozen(t *testing.T) {
-	if thriftCallerMapPackID != "phebs.thrift.caller.go" || thriftCallerMapClaimVersion != "1.0.0" {
+	if thriftCallerMapPackID != "phebs.thrift.caller.go" || thriftCallerMapClaimVersion != "1.1.0" {
 		t.Fatalf("Thrift Caller Map identity = %s %s", thriftCallerMapPackID, thriftCallerMapClaimVersion)
 	}
 	if _, bound := packRecipes[thriftCallerMapPackID]; !bound {

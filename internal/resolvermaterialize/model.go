@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PackVersion = "1.3.0"
+	PackVersion = "1.4.0"
 
 	GoModulePackName            = "go-module"
 	GRPCGeneratedPackName       = "grpc-generated-attribution"
@@ -79,11 +79,12 @@ const (
 )
 
 type adapter struct {
-	protocol          Protocol
-	pack              resolvercatalog.ResolverPack
-	callerDomain      string
-	callerVersion     string
-	declarationDomain string
+	protocol           Protocol
+	pack               resolvercatalog.ResolverPack
+	callerDomain       string
+	callerVersion      string
+	declarationDomain  string
+	declarationVersion string
 }
 
 // Registry is the one ordered adapter generation shared by startup
@@ -149,9 +150,10 @@ func NewRegistry(extractors []extract.Extractor) (*Registry, error) {
 			pack: resolvercatalog.ResolverPack{
 				Name: item.pack, Version: PackVersion,
 			},
-			callerDomain:      callerVersionDomain(item.caller),
-			callerVersion:     callerVersion,
-			declarationDomain: item.declaration,
+			callerDomain:       callerVersionDomain(item.caller),
+			callerVersion:      callerVersion,
+			declarationDomain:  item.declaration,
+			declarationVersion: versions[item.declaration],
 		})
 	}
 	if len(registry.adapters) == 0 {
@@ -238,6 +240,8 @@ type MaterializationPolicy struct {
 	GeneratedOrdering                     string `json:"generated_ordering"`
 	GeneratedSymbolIdentityAccounting     string `json:"generated_symbol_identity_accounting"`
 	ThriftOperationBinding                string `json:"thrift_operation_binding"`
+	ThriftRWProvenance                    string `json:"thriftrw_provenance"`
+	MaxThriftRWClients                    int    `json:"max_thriftrw_clients"`
 	MaxGoModuleBytes                      int    `json:"max_go_module_bytes"`
 	MaxSnapshotBlobBytes                  int64  `json:"max_snapshot_blob_bytes"`
 	MaxInputBlobReads                     int    `json:"max_input_blob_reads"`
@@ -280,6 +284,8 @@ func FrozenMaterializationPolicy() MaterializationPolicy {
 		GeneratedOrdering:                     "declaration-input-mapping-symbol-sorted-candidates-invocation-v2",
 		GeneratedSymbolIdentityAccounting:     "catalog-wide-unique-source-plus-descriptor-v1",
 		ThriftOperationBinding:                ThriftOperationBinding,
+		ThriftRWProvenance:                    ThriftRWProvenance,
+		MaxThriftRWClients:                    MaxThriftRWClients,
 		MaxGoModuleBytes:                      resolverinput.MaxGoModuleBytes,
 		MaxSnapshotBlobBytes:                  extract.MaxBlobBytes,
 		MaxInputBlobReads:                     MaxInputBlobReads,

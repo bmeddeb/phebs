@@ -1,0 +1,41 @@
+{
+  "schema": "phebs-extractor-pack-manifest-v1",
+  "pack_id": "phebs.thrift.caller.comparison",
+  "pack_claim_version": "1.1.0",
+  "distribution": "default-on-package",
+  "owner": "Ben Meddeb",
+  "ticket": "PHEBS-44, PHEBS-46",
+  "qualification": "bounded-integration-tests",
+  "implementation": "compare_operation_callers@caller-comparison-v2+thrift-pairs (the exact caller comparison service, released for Thrift-to-Thrift endpoint pairs)",
+  "requires": {
+    "released_recipe": "phebs.thrift.caller.go (thrift-contract@1.1.2 plus thrift-caller@1.6.0-released.1), the running extractors, claim 1.1.0"
+  },
+  "admission": "Admitted only through a verified signed selection beside the current released Thrift Caller Map recipe; an experimental Thrift caller generation never backs it.",
+  "surfaces": {
+    "capability": "contract-caller-comparison",
+    "ui": "/compare-callers (Thrift endpoint pairs)",
+    "mcp_tools": [
+      "compare_operation_callers"
+    ],
+    "http": "Existing authenticated /api/compare_operation_callers with old_protocol=thrift and replacement_protocol=thrift"
+  },
+  "pairs": {
+    "released": [
+      "thrift -> thrift"
+    ],
+    "refused": [
+      "protobuf <-> thrift (mixed pairs, 503)",
+      "protobuf -> protobuf unless phebs.grpc.caller.comparison is also released"
+    ]
+  },
+  "excluded": [
+    "mixed protobuf and Thrift endpoint pairs",
+    "Kitex / fbthrift generated clients, and thriftrw/YARPC clients without a committed .thrift whose SHA-1 matches (not resolved by the Thrift Caller Map)",
+    "thrift-consumer name-matching evidence (T58 NO-GO)",
+    "operation Impact for Thrift",
+    "independent extraction accuracy",
+    "migration completeness, runtime use and retirement safety"
+  ],
+  "limits": "Existing comparison, Caller Map, request and citation bounds; no ceiling widened; no new measured capacity or SLO.",
+  "expiry": "2027-01-12T23:59:59Z"
+}

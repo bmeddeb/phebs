@@ -1,15 +1,15 @@
 {
   "release_schema_version": "1.0",
-  "release_id": "rel-phebs.thrift.caller.go-1.0.4",
-  "release_version": "1.0.4",
+  "release_id": "rel-phebs.thrift.caller.go-1.1.0",
+  "release_version": "1.1.0",
   "pack_id": "phebs.thrift.caller.go",
-  "pack_claim_version": "1.0.0",
+  "pack_claim_version": "1.1.0",
   "card": {
-    "artifact_id": "thrift-caller-map-card-1.0.0.md",
+    "artifact_id": "thrift-caller-map-card-1.1.0.md",
     "digest": ""
   },
   "manifest": {
-    "artifact_id": "thrift-caller-map-manifest-1.0.0.json",
+    "artifact_id": "thrift-caller-map-manifest-1.1.0.json",
     "digest": ""
   },
   "implementation": {
@@ -20,15 +20,16 @@
   },
   "referenced_artifacts_root_digest": "",
   "validation": {
-    "artifact_id": "thrift-caller-map-validation-1.0.0.json",
+    "artifact_id": "thrift-caller-map-validation-1.1.0.json",
     "digest": "",
     "applies": true,
     "expires_at": "2027-01-12T23:59:59Z",
     "expiry_trigger": null
   },
   "derived_status": "released",
-  "approved_at": "2026-11-25T00:00:00Z",
+  "approved_at": "2026-11-26T00:00:00Z",
   "approval_records": [
-    "ben-meddeb-2026-11-25-phebs42-thrift-caller-map"
+    "ben-meddeb-2026-11-25-phebs42-thrift-caller-map",
+    "ben-meddeb-2026-11-26-phebs46-thriftrw-yarpc"
   ]
 }

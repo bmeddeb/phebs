@@ -1716,9 +1716,30 @@ It serves Caller Map for `protocol=thrift`:
   `contract-caller-map` capability. Its declaration extractor also lights
   Thrift declarations in Contract Atlas, as the protobuf recipe does.
 
+Since claim 1.1.0 (PHEBS-46) it also serves Go callers of thriftrw +
+`thriftrw-plugin-yarpc` generated clients, through the generated client's
+`Interface` (held from `New(...)` or as an `Interface` value), without any
+mapping file. The resolver catalog relates the client to its `.thrift` file
+only through thriftrw's embedded provenance, verified by content hash:
+
+- the client's `<Service>_<Method>_Helper.Args` calls name one thriftrw
+  package, located through the repository's `go.mod` modules, whose one
+  thriftrw file embeds `ThriftModule{Package: <that import path>, FilePath,
+  SHA1}`;
+- exactly one `.thrift` file with declared operations sits at `FilePath` (or
+  ends in `/FilePath`) and has that content SHA-1.
+
+The Thrift method keeps its IDL spelling (`MethodName()`), so the Go method
+`Echo` is served under `…/echo`. A hash mismatch or several matching files is
+an explicit abstention; a client whose thriftrw package cannot be found is not
+described; an explicit `generated-from-snapshot.json` entry for the client
+file governs it.
+
 It does not serve:
 
-- thriftrw, YARPC, Kitex or fbthrift clients, which are not resolved;
+- Kitex or fbthrift clients, or thriftrw/YARPC clients whose `.thrift` is not
+  committed with a matching SHA-1 (for example an IDL in an unpopulated
+  submodule), or methods inherited through Thrift `extends`;
 - name-matching `thrift-consumer` evidence;
 - caller comparison or operation Impact for Thrift by itself. Each is its own
   claim (see the two sections below).

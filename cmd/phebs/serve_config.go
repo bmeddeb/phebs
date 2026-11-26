@@ -189,7 +189,7 @@ const callerComparisonPackID = "phebs.grpc.caller.comparison"
 // Thrift pairs stay unreleased.
 const (
 	thriftCallerComparisonPackID       = "phebs.thrift.caller.comparison"
-	thriftCallerComparisonClaimVersion = "1.0.0"
+	thriftCallerComparisonClaimVersion = "1.1.0"
 )
 const operationImpactPackID = "phebs.contract.impact.operation"
 const operationImpactClaimVersion = "1.0.0"
@@ -199,7 +199,7 @@ const operationImpactClaimVersion = "1.0.0"
 // Caller Map recipe (see releasedThriftOperationImpact).
 const (
 	thriftOperationImpactPackID       = "phebs.thrift.impact.operation"
-	thriftOperationImpactClaimVersion = "1.0.0"
+	thriftOperationImpactClaimVersion = "1.1.0"
 )
 
 // changeImpactPackID is the PHEBS-41 composed change-impact claim: the
@@ -555,12 +555,14 @@ func (releasedGRPCCaller) Version() string { return "1.6.0-released.1" }
 // thriftCallerMapPackID is the PHEBS-42 Thrift Caller Map: Go callers of
 // Apache-Thrift-compiler-generated clients, attributed through the released
 // Thrift declaration lineage. It mirrors callerMapPackID for the Thrift lane.
-// thriftrw/YARPC clients are outside its scope. Thrift caller comparison is
+// Claim 1.1.0 (PHEBS-46) adds thriftrw-plugin-yarpc clients, related through
+// the resolver catalog's hash-verified thriftrw provenance (resolver pack
+// 1.4.0); the extractor recipe is unchanged. Thrift caller comparison is
 // its own claim (thriftCallerComparisonPackID, PHEBS-44), and so is Thrift
 // operation Impact (thriftOperationImpactPackID, PHEBS-45).
 const (
 	thriftCallerMapPackID       = "phebs.thrift.caller.go"
-	thriftCallerMapClaimVersion = "1.0.0"
+	thriftCallerMapClaimVersion = "1.1.0"
 )
 
 // thriftCallerMapRecipe carries the Thrift declaration extractor for the same
