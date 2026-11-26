@@ -118,6 +118,11 @@ type Options struct {
 	// claim and its actual released Caller Map recipe. Provisional flags do not
 	// substitute for either dependency.
 	OperationImpactEnabled bool
+	// ThriftOperationImpactEnabled admits the same report for exact Thrift
+	// endpoints under its own signed claim (PHEBS-45). Each protocol is served
+	// only under its own claim: the protobuf claim never serves a Thrift
+	// endpoint, and this one never serves a protobuf endpoint.
+	ThriftOperationImpactEnabled bool
 	// CallerReader is the sole T30.6j product read boundary over an exact
 	// complete caller-generation publication. Serve shares its underlying
 	// publication registry with the worker and lifecycle reconcilers so an

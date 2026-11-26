@@ -21338,6 +21338,12 @@ TCLIService answered all 23 operations exactly, with each copy's 16 resolved
 callers on its own side. See the 2026-11-25 PHEBS-44 ADR in `PLAN.md`. Receipts
 are in `~/phebs-instance/receipts/phebs44-2026-11-25/` on `dave`.
 
+*PHEBS-45 (2026-11-26, in progress):* the claim `phebs.thrift.impact.operation`
+1.0.0 releases the operation Impact report for exact Thrift endpoints over the
+existing report route, MCP tool and view, admitted only beside the released
+Thrift Caller Map recipe. Each protocol is served only under its own claim. See
+the 2026-11-26 PHEBS-45 ADR in `PLAN.md`.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

@@ -205,7 +205,8 @@ func TestReleaseLoadBindingsForDerivesEveryField(t *testing.T) {
 		"phebs.kafka.topics list_kafka_topics@kafka-topic-inventory-v1\n" +
 		"phebs.protobuf.change-impact build_contract_change_impact@contract-impact-report-v2+buf-1.72.0-WIRE\n" +
 		"phebs.protobuf.wire.buf check_wire_compatibility@buf-1.72.0-WIRE\n" +
-		"phebs.thrift.caller.comparison compare_operation_callers@caller-comparison-v2+thrift-pairs\n"); opts.Implementation.PackImplementationDigest != want {
+		"phebs.thrift.caller.comparison compare_operation_callers@caller-comparison-v2+thrift-pairs\n" +
+		"phebs.thrift.impact.operation build_operation_impact_report@contract-impact-operation-v1+thrift\n"); opts.Implementation.PackImplementationDigest != want {
 		t.Fatalf("PackImplementationDigest = %s, want the bound-claim digest %s", opts.Implementation.PackImplementationDigest, want)
 	}
 	if want := censusRootDigest(); opts.ReferencedArtifactsRootDigest != want {

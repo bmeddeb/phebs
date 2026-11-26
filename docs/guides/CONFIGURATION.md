@@ -1720,8 +1720,8 @@ It does not serve:
 
 - thriftrw, YARPC, Kitex or fbthrift clients, which are not resolved;
 - name-matching `thrift-consumer` evidence;
-- operation Impact for Thrift, whose released claim stays protobuf-only. Thrift
-  caller comparison is its own claim (see below).
+- caller comparison or operation Impact for Thrift by itself. Each is its own
+  claim (see the two sections below).
 
 A missing, expired, revoked or suspended record admits no released Thrift
 caller; the protobuf Caller Map is unaffected. The release package ships the
@@ -1751,7 +1751,8 @@ Under any released comparison claim a pair is compared only when both
 endpoints share a protocol whose own claim is released. Mixed protobuf and
 Thrift pairs answer 503, and so do protobuf pairs unless
 `phebs.grpc.caller.comparison` is also selected; the protobuf claim likewise
-refuses Thrift pairs unless this one is selected. With only provisional
+refuses Thrift pairs unless this one is selected. Operation Impact for Thrift is
+its own claim (see below). With only provisional
 switches on, the experimental comparison compares any pair, as before.
 
 A missing, expired, revoked or suspended record, or a withdrawn Thrift Caller
@@ -1760,6 +1761,33 @@ release package ships the claim on by default, and `package_default: off`
 keeps it dark with the rest. Steady-state cost is one map lookup and one
 protocol comparison per request; no new worker, cache, lock, timer, index or
 schema.
+
+### Thrift operation Impact release selection (PHEBS-45)
+
+The claim `phebs.thrift.impact.operation`, claim version 1.0.0, releases the
+operation Impact report (`contract-impact-operation-v1`, shape
+`operation_callers`) for one exact Thrift endpoint. It carries no extractor and
+is admitted only beside the current released Thrift Caller Map recipe
+(`phebs.thrift.caller.go`), as the running extractors; a verified signed record
+selects it, and there is no YAML switch.
+
+It serves, for `protocol=thrift`, the authenticated
+`/api/operation_impact_report` route, the MCP `build_operation_impact_report`
+tool, the operation Impact view (reached from a Thrift operation in Contract
+Atlas or Caller Map) and the `contract-impact-operation` capability. The report
+is one unmodified exact Thrift Caller Map page with the conclusion
+`evidence_present`, `exact_empty` or `unavailable`; field, change,
+implementation, WIRE, matching-call and saved-report sections stay
+`not_in_supported_shape`.
+
+Each endpoint protocol is served only under its own claim: Thrift under this
+one, protobuf under `phebs.contract.impact.operation`. A protocol whose claim
+is not selected answers 400 before any caller read. A missing, expired,
+revoked or suspended record, or a withdrawn Thrift Caller Map, admits no Thrift
+report; protobuf operation Impact is unaffected. The release package ships the
+claim on by default, and `package_default: off` keeps it dark with the rest.
+Steady-state cost is one protocol check per request; no new worker, cache,
+lock, timer, index or schema.
 
 ### Independent committed Thrift field recipes (T52.3)
 

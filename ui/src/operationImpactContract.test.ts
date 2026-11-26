@@ -165,3 +165,20 @@ test.each<[string, (report: OperationImpactReport) => void]>([
   mutate(report)
   expect(() => validateOperationImpactReport(report, operationQuery, 50)).toThrow(/authority or bounded response/)
 })
+
+test('PHEBS-45: a Thrift report validates only against its own Thrift query', () => {
+  const thriftQuery = structuredClone(operationQuery)
+  thriftQuery.endpoint.protocol = 'thrift'
+  const report = operationReport()
+  report.conclusion.query = structuredClone(thriftQuery)
+  report.caller_page.query = structuredClone(thriftQuery)
+  for (const row of report.caller_page.rows) row.protocol = 'thrift'
+  expect(validateOperationImpactReport(report, thriftQuery, 50)).toBe(report)
+  expect(() => validateOperationImpactReport(structuredClone(report), operationQuery, 50)).toThrow()
+  const mixed = structuredClone(report)
+  mixed.caller_page.rows[0].protocol = 'protobuf'
+  expect(() => validateOperationImpactReport(mixed, thriftQuery, 50)).toThrow()
+  const foreign = structuredClone(thriftQuery)
+  foreign.endpoint.protocol = 'grpc' as typeof foreign.endpoint.protocol
+  expect(() => validateOperationImpactReport(structuredClone(report), foreign, 50)).toThrow()
+})

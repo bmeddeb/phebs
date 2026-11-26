@@ -19628,3 +19628,49 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       there was no panic.
     - Receipts are in `~/phebs-instance/receipts/phebs44-2026-11-25/` on
       `dave`.
+
+- **2026-11-26 — PHEBS-45 releases Thrift operation Impact (Ben: "Yes, start it").**
+  Goal: turn the last Thrift twin of a released protobuf report into a released
+  product surface. The operation Impact report is one unmodified exact Caller
+  Map page; only `report_operation.go` refused non-protobuf endpoints with 400,
+  and admission required the protobuf Caller Map recipe.
+  - **Decision.** A claim-only pack, `phebs.thrift.impact.operation` 1.0.0,
+    bound as `build_operation_impact_report@contract-impact-operation-v1+thrift`,
+    admitted on the same condition as Thrift caller comparison (PHEBS-44): the
+    current released Thrift Caller Map recipe is the running extractor set.
+    That check is now one shared function. Each endpoint protocol is served
+    only under its own claim; a protocol whose claim is not selected answers 400
+    before any caller read. The report, its schema and its bounds are unchanged.
+  - **UI.** The view, the Contract Atlas and Caller Map links and the report
+    validator accept protobuf or Thrift; the validator also requires every row's
+    protocol to equal the requested endpoint's. Rejected: per-protocol
+    capability strings. They would change the `contract-impact-operation`
+    contract for one edge case (only one of the two claims selected), which the
+    server already answers with a named 400, as caller comparison does for an
+    unselected pair since PHEBS-44.
+  - **Acceptance.** Bounded integration tests and the three gates (2026-11-08
+    rule):
+    - the admission matrix (joint, beside the Thrift Atlas and comparison,
+      claim alone, Thrift Caller Map alone, beside only the protobuf Caller
+      Map, beside protobuf operation Impact, revoked, Thrift revoked beside
+      protobuf, suspended, expired, experimental Thrift cannot substitute,
+      unsupported claim version) and an old or missing Thrift extractor;
+    - the protocol fence under the protobuf claim, the Thrift claim and both,
+      with refused protocols reading no caller page;
+    - a Thrift report built end to end over HTTP (`evidence_present`,
+      `exact_empty`, shared citation, a protobuf endpoint refused without a
+      caller read), and the UI view, links and validator.
+    Then `dave`: gohive TCLIService.
+  - **Not established.** No runtime impact, completeness, retirement-safety,
+    precision, recall or scale claim; `exact_empty` never proves absence.
+    Expiry is 2027-01-12, the Thrift Caller Map's.
+  - **Steady-state cost.** One protocol membership check per report request
+    and one extractor-version scan at startup. No new worker, cache, lock,
+    child, timer, index or schema; no ceiling raised.
+  - **Release.** Ships as `v0.3.12` with sixteen signed records. The fifteen
+    existing templates take a patch bump for the rebind; no claim, card,
+    reader version, approval or expiry changes. `thrift-operation-impact`
+    1.0.0 is new. The `thrift-caller-map` and `thrift-caller-comparison`
+    cards keep their "operation Impact stays protobuf-only" lines byte for byte
+    (their digests are bound); the new card supersedes them for Thrift
+    endpoints only.

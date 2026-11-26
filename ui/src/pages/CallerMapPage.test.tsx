@@ -375,6 +375,16 @@ test('Impact entry preserves the exact current query, cursor, effective page siz
   expect(api.fetchContractCallers).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ owner: 'team-a', resolution: 'syntax' }), 100, 'opaque-exact-cursor', expect.any(AbortSignal))
 })
 
+test('PHEBS-45: a Thrift endpoint also offers operation Impact', async () => {
+  const params = route()
+  params.set('protocol', 'thrift')
+  render(pageElement(params, false, true))
+  const link = await screen.findByRole('link', { name: 'Inspect operation impact' })
+  const target = new URLSearchParams(link.getAttribute('href')?.split('?')[1])
+  expect(target.get('shape')).toBe('operation_callers')
+  expect(target.get('protocol')).toBe('thrift')
+})
+
 test('requires a complete Contract Atlas identity before making a request', () => {
   renderPage(new URLSearchParams({ operation }))
   expect(screen.getByText(/requires a protocol, declaration repository/)).toBeTruthy()

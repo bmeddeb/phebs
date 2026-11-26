@@ -90,11 +90,11 @@ test('a replacement source with retained caller metadata stays unavailable throu
 
 const unsupported: Record<string, string>[] = [
   { shape: 'saved_report' }, { shape: 'field_references' }, { shape: 'proposed_change' },
-  { field_number: '1' }, { bundle: 'pb_retained' }, { protocol: 'thrift' }, { page_size: '101' },
+  { field_number: '1' }, { bundle: 'pb_retained' }, { protocol: 'grpc' }, { page_size: '101' },
 ]
 test.each(unsupported)('unsupported or mixed input stays named and does not fall back to legacy: %o', async (extra) => {
   render(tree(route(extra), [...stable, 'contract-impact-report']))
-  expect(screen.getByText(/This report supports one exact protobuf operation/)).toBeTruthy()
+  expect(screen.getByText(/This report supports one exact protobuf or Thrift operation/)).toBeTruthy()
   expect(api.fetchOperationImpactReport).not.toHaveBeenCalled()
   expect(api.fetchSavedImpact).not.toHaveBeenCalled()
   expect(api.fetchOperationImpact).not.toHaveBeenCalled()
@@ -112,7 +112,7 @@ test('repeated route identity is refused instead of silently selecting its first
   const params = route()
   params.append('operation', '/shop.Cart/Other')
   render(tree(params))
-  expect(screen.getByText(/This report supports one exact protobuf operation/)).toBeTruthy()
+  expect(screen.getByText(/This report supports one exact protobuf or Thrift operation/)).toBeTruthy()
   expect(api.fetchOperationImpactReport).not.toHaveBeenCalled()
 })
 
@@ -168,4 +168,17 @@ test('a late response cannot replace the selected endpoint report', async () => 
   await act(async () => { late.resolve(unavailableOperationReport()) })
   await waitFor(() => expect(screen.queryByText(unavailableOperationReport().conclusion.qualification)).toBeNull())
   expect(screen.getByTestId('caller-map-row')).toBeTruthy()
+})
+
+test('PHEBS-45: a Thrift operation route requests the Thrift report', async () => {
+  const report = operationReport()
+  report.conclusion.query.endpoint.protocol = 'thrift'
+  report.caller_page.query.endpoint.protocol = 'thrift'
+  for (const row of report.caller_page.rows) row.protocol = 'thrift'
+  api.fetchOperationImpactReport.mockResolvedValue(report)
+  render(tree(route({ protocol: 'thrift' })))
+  await screen.findByText(report.conclusion.qualification)
+  expect(api.fetchOperationImpactReport).toHaveBeenCalledTimes(1)
+  expect(api.fetchOperationImpactReport.mock.calls[0][0]).toMatchObject({ protocol: 'thrift', operation: operationQuery.endpoint.operation })
+  expect(screen.queryByText(/This report supports one exact protobuf or Thrift operation/)).toBeNull()
 })

@@ -37,7 +37,7 @@ func operationImpactTestPage() *CallerMapPage {
 func TestOperationImpactUsesOneUnmodifiedCallerPage(t *testing.T) {
 	page := operationImpactTestPage()
 	stub := &operationImpactCallerStub{page: page}
-	service := &OperationImpactService{callers: stub}
+	service := &OperationImpactService{callers: stub, protocols: []string{"protobuf"}}
 	report, err := service.Build(t.Context(), operationImpactShape, page.Query, 50, "opaque")
 	if err != nil || stub.calls != 1 || stub.query != page.Query || stub.size != 50 || stub.cursor != "opaque" || report.CallerPage != page || &report.CallerPage.Rows[0] != &page.Rows[0] || report.Conclusion.State != "evidence_present" || report.Conclusion.Query != page.Query || report.Conclusion.GenerationDigest != page.Generation.GenerationDigest || report.UnavailableSections.SavedReport != "not_in_supported_shape" {
 		t.Fatalf("report=%+v stub=%+v err=%v", report, stub, err)
@@ -86,7 +86,7 @@ func TestOperationImpactEmptyUnavailableAndInvalidPages(t *testing.T) {
 			query := page.Query
 			test.change(page)
 			stub := &operationImpactCallerStub{page: page}
-			report, err := (&OperationImpactService{callers: stub}).Build(t.Context(), operationImpactShape, query, 100, "")
+			report, err := (&OperationImpactService{callers: stub, protocols: []string{"protobuf"}}).Build(t.Context(), operationImpactShape, query, 100, "")
 			if stub.calls != 1 || (err != nil) != test.refuse {
 				t.Fatalf("calls=%d report=%+v err=%v", stub.calls, report, err)
 			}
@@ -123,7 +123,7 @@ func TestOperationImpactScopeUnitBinding(t *testing.T) {
 				page.Rows = []CallerMapRow{}
 			}
 			stub := &operationImpactCallerStub{page: page}
-			report, err := (&OperationImpactService{callers: stub}).Build(t.Context(), operationImpactShape, page.Query, 100, "")
+			report, err := (&OperationImpactService{callers: stub, protocols: []string{"protobuf"}}).Build(t.Context(), operationImpactShape, page.Query, 100, "")
 			if (err != nil) != test.refuse || stub.calls != 1 {
 				t.Fatalf("report=%+v calls=%d err=%v", report, stub.calls, err)
 			}
@@ -136,7 +136,7 @@ func TestOperationImpactScopeUnitBinding(t *testing.T) {
 
 func TestOperationImpactUnsupportedAndErrors(t *testing.T) {
 	stub := &operationImpactCallerStub{page: operationImpactTestPage()}
-	service := &OperationImpactService{callers: stub}
+	service := &OperationImpactService{callers: stub, protocols: []string{"protobuf"}}
 	for _, shape := range []string{"", "unknown", "field_references", "proposed_change", "implementations", "wire_verdict", "matching_syntactic_calls", "saved_report"} {
 		if _, err := service.Build(t.Context(), shape, stub.page.Query, 50, ""); err == nil || stub.calls != 0 {
 			t.Fatalf("shape=%s calls=%d err=%v", shape, stub.calls, err)
@@ -153,5 +153,51 @@ func TestOperationImpactUnsupportedAndErrors(t *testing.T) {
 	}
 	if NewOperationImpactService(Options{OperationImpactEnabled: true, CallerMap: &CallerMapService{}}) != nil || NewOperationImpactService(Options{CallerMap: &CallerMapService{exact: &exactCallerMapService{}}}) != nil {
 		t.Fatal("unadmitted or legacy engine accepted")
+	}
+}
+
+// TestOperationImpactProtocolClaims pins the PHEBS-45 fence: each endpoint
+// protocol is served only under its own released claim, and a refused
+// protocol never reaches the Caller Map.
+func TestOperationImpactProtocolClaims(t *testing.T) {
+	for _, test := range []struct {
+		name             string
+		protobuf, thrift bool
+		admitted         []string
+		refusal          string
+	}{
+		{name: "protobuf claim", protobuf: true, admitted: []string{"protobuf"}, refusal: "requires an exact protobuf endpoint"},
+		{name: "Thrift claim", thrift: true, admitted: []string{"thrift"}, refusal: "requires an exact thrift endpoint"},
+		{name: "both claims", protobuf: true, thrift: true, admitted: []string{"protobuf", "thrift"}, refusal: "requires an exact protobuf or thrift endpoint"},
+	} {
+		exact := &CallerMapService{exact: &exactCallerMapService{}}
+		service := NewOperationImpactService(Options{CallerMap: exact, OperationImpactEnabled: test.protobuf, ThriftOperationImpactEnabled: test.thrift})
+		if service == nil {
+			t.Fatalf("%s: service not constructed", test.name)
+		}
+		for _, protocol := range []string{"protobuf", "thrift", "grpc", ""} {
+			stub := &operationImpactCallerStub{page: operationImpactTestPage()}
+			service.callers = stub
+			query := stub.page.Query
+			query.Endpoint.Protocol = protocol
+			stub.page.Query = normalizeCallerMapQuery(query)
+			_, err := service.Build(t.Context(), operationImpactShape, query, 50, "")
+			admitted := false
+			for _, want := range test.admitted {
+				admitted = admitted || want == protocol
+			}
+			if admitted {
+				if stub.calls != 1 {
+					t.Fatalf("%s/%s: admitted protocol did not read the Caller Map (err %v)", test.name, protocol, err)
+				}
+				continue
+			}
+			if err == nil || stub.calls != 0 || !strings.Contains(err.Error(), test.refusal) {
+				t.Fatalf("%s/%s: refused protocol = %v, calls %d", test.name, protocol, err, stub.calls)
+			}
+		}
+	}
+	if NewOperationImpactService(Options{CallerMap: &CallerMapService{exact: &exactCallerMapService{}}}) != nil {
+		t.Fatal("service constructed without any released claim")
 	}
 }

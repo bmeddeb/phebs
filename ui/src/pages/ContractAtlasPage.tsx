@@ -837,14 +837,14 @@ function OperationDetail({
                 View callers
               </a>
             )}
-            {(impactAvailable || operationImpactAvailable && selected.protocol === 'protobuf') && <a
-              href={href('/impact', operationImpactAvailable && selected.protocol === 'protobuf' ? {
+            {(impactAvailable || operationImpactAvailable && (selected.protocol === 'protobuf' || selected.protocol === 'thrift')) && <a
+              href={href('/impact', operationImpactAvailable && (selected.protocol === 'protobuf' || selected.protocol === 'thrift') ? {
                 shape: 'operation_callers', protocol: selected.protocol, repository: selected.repository,
                 lineage: selected.declaration_lineage, operation: selected.operation ?? operation.operation,
               } : { operation: operation.operation })}
               className={css(operationLinkStyle(tok))}
             >
-              {operationImpactAvailable && selected.protocol === 'protobuf' ? 'Inspect operation impact' : 'Analyze impact'}
+              {operationImpactAvailable && (selected.protocol === 'protobuf' || selected.protocol === 'thrift') ? 'Inspect operation impact' : 'Analyze impact'}
             </a>}
           </div>
         </div>

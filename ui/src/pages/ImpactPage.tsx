@@ -36,6 +36,9 @@ const supportedCoverageSchemas = new Set([
   'coverage-certificate-v2',
   'coverage-certificate-v3',
 ])
+// PHEBS-45: each protocol is served under its own claim; the server refuses
+// one whose claim is not released.
+const operationImpactProtocols = new Set(['protobuf', 'thrift'])
 const operationRouteKeys = new Set(['shape', 'protocol', 'repository', 'lineage', 'operation', 'unit', 'owner', 'path_prefix', 'code_role', 'tier', 'freshness', 'resolution', 'ordering', 'page_size', 'cursor', 'view'])
 
 export default function ImpactPage({
@@ -64,11 +67,11 @@ function OperationImpactView({ params, available }: { params: URLSearchParams; a
   const shape = params.get('shape') ?? 'operation_callers'
   const mixed = [...params.keys()].some((key) => !operationRouteKeys.has(key) || params.getAll(key).length !== 1)
   const pageSize = Number(params.get('page_size') ?? 100)
-  if (!available || shape !== 'operation_callers' || mixed || (params.has('protocol') && params.get('protocol') !== 'protobuf') || !Number.isSafeInteger(pageSize) || pageSize < 0 || pageSize > 100) {
+  if (!available || shape !== 'operation_callers' || mixed || (params.has('protocol') && !operationImpactProtocols.has(params.get('protocol') ?? '')) || !Number.isSafeInteger(pageSize) || pageSize < 0 || pageSize > 100) {
     return <section className={css({ maxWidth: '920px', margin: '0 auto', color: tok.textPrimary })}>
       <h1 className={css({ fontSize: '22px', lineHeight: '30px' })}>Operation impact</h1>
       <Notification kind={NOTIFICATION_KIND.info} overrides={{ Body: { style: { width: 'auto', margin: 0 } } }}>
-        {!available ? 'Operation impact is unavailable on this server.' : 'This report supports one exact protobuf operation. Field, change, implementation, WIRE, matching-call and saved-report sections are unavailable.'}
+        {!available ? 'Operation impact is unavailable on this server.' : 'This report supports one exact protobuf or Thrift operation. Field, change, implementation, WIRE, matching-call and saved-report sections are unavailable.'}
       </Notification>
       <a href="#/contracts" className={css({ display: 'inline-flex', marginTop: '16px', color: tok.accent, fontSize: '13px' })}>Select an operation in Contracts</a>
     </section>

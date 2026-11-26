@@ -475,7 +475,7 @@ function EndpointHeader({
         </div>
       </div>
       <div className={css({ display: 'flex', gap: '8px', flexWrap: 'wrap' })}>
-        {operationImpactAvailable && !operationImpact && endpoint.protocol === 'protobuf' && <a className={css(linkButtonStyle(tok))} href={operationImpactHref}>Inspect operation impact</a>}
+        {operationImpactAvailable && !operationImpact && (endpoint.protocol === 'protobuf' || endpoint.protocol === 'thrift') && <a className={css(linkButtonStyle(tok))} href={operationImpactHref}>Inspect operation impact</a>}
         {comparisonAvailable && (
           <a className={css(linkButtonStyle(tok))} href={href('/compare-callers', {
             old_protocol: endpoint.protocol,

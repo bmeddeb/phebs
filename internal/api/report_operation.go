@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -18,13 +20,27 @@ type operationImpactCallers interface {
 
 // OperationImpactService wraps the already-constructed exact Caller Map
 // service. It owns no reader, index, cursor secret, cache, store or classifier.
-type OperationImpactService struct{ callers operationImpactCallers }
+// protocols names the endpoint protocols whose own signed claim is released.
+type OperationImpactService struct {
+	callers   operationImpactCallers
+	protocols []string
+}
 
 func NewOperationImpactService(opts Options) *OperationImpactService {
-	if !opts.OperationImpactEnabled || opts.CallerMap == nil || opts.CallerMap.exact == nil {
+	if opts.CallerMap == nil || opts.CallerMap.exact == nil {
 		return nil
 	}
-	return &OperationImpactService{callers: opts.CallerMap}
+	var protocols []string
+	if opts.OperationImpactEnabled {
+		protocols = append(protocols, "protobuf")
+	}
+	if opts.ThriftOperationImpactEnabled {
+		protocols = append(protocols, "thrift")
+	}
+	if len(protocols) == 0 {
+		return nil
+	}
+	return &OperationImpactService{callers: opts.CallerMap, protocols: protocols}
 }
 
 type OperationImpactConclusion struct {
@@ -61,8 +77,10 @@ func (service *OperationImpactService) Build(ctx context.Context, shape string, 
 		}
 		return nil, huma.Error400BadRequest("unknown operation impact report shape")
 	}
-	if query.Endpoint.Protocol != "protobuf" {
-		return nil, huma.Error400BadRequest("operation impact requires an exact protobuf endpoint")
+	if !slices.Contains(service.protocols, query.Endpoint.Protocol) {
+		return nil, huma.Error400BadRequest(
+			"operation impact requires an exact " + strings.Join(service.protocols, " or ") + " endpoint",
+		)
 	}
 	query = normalizeCallerMapQuery(query)
 	page, err := service.callers.List(ctx, query, pageSize, cursor)

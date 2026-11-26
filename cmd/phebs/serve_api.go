@@ -271,19 +271,42 @@ func releasedThriftCallerComparison(d *serveDeps) bool {
 	if !d.releasedClaims[thriftCallerComparisonPackID] {
 		return false
 	}
-	if d.releasedDomains["thrift-contract"] && d.releasedDomains["thrift-caller"] {
-		declaration, caller := false, false
-		want := thriftCallerMapRecipe()
-		for _, ex := range d.exs {
-			declaration = declaration || ex.Domain() == "thrift-contract" && ex.Version() == want[0].Version()
-			caller = caller || ex.Domain() == "thrift-caller" && ex.Version() == want[1].Version()
-		}
-		if declaration && caller {
-			return true
-		}
+	if releasedThriftCallerRecipeRunning(d) {
+		return true
 	}
 	log.Printf("release selection: %s withdrawn: its comparison needs the current released Thrift Caller Map recipe", thriftCallerComparisonPackID)
 	return false
+}
+
+// releasedThriftOperationImpact admits the PHEBS-45 claim on the same
+// condition as Thrift caller comparison: the current released Thrift Caller
+// Map recipe is the running extractor set for both Thrift domains.
+func releasedThriftOperationImpact(d *serveDeps) bool {
+	if !d.releasedClaims[thriftOperationImpactPackID] {
+		return false
+	}
+	if releasedThriftCallerRecipeRunning(d) {
+		return true
+	}
+	log.Printf("release selection: %s withdrawn: operation Impact needs the current released Thrift Caller Map recipe", thriftOperationImpactPackID)
+	return false
+}
+
+// releasedThriftCallerRecipeRunning reports whether both released Thrift
+// Caller Map domains are admitted and are the running extractors at the
+// released recipe's versions, so a dark or experimental Thrift caller
+// generation never backs a released Thrift claim.
+func releasedThriftCallerRecipeRunning(d *serveDeps) bool {
+	if !d.releasedDomains["thrift-contract"] || !d.releasedDomains["thrift-caller"] {
+		return false
+	}
+	declaration, caller := false, false
+	want := thriftCallerMapRecipe()
+	for _, ex := range d.exs {
+		declaration = declaration || ex.Domain() == "thrift-contract" && ex.Version() == want[0].Version()
+		caller = caller || ex.Domain() == "thrift-caller" && ex.Version() == want[1].Version()
+	}
+	return declaration && caller
 }
 
 func releasedOperationImpact(d *serveDeps) bool {
@@ -400,6 +423,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		CallerComparisonReleased:       comparisonReleased,
 		ThriftCallerComparisonReleased: thriftComparisonReleased,
 		OperationImpactEnabled:         releasedOperationImpact(d),
+		ThriftOperationImpactEnabled:   releasedThriftOperationImpact(d),
 		CallerReader:                   d.callerReader,
 		ProofBundleRetention:           cfg.ProofBundles.RetentionFor(),
 		Compatibility:                  d.compatibility, Visible: d.visibleFor,

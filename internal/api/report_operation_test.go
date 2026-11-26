@@ -103,3 +103,57 @@ func TestOperationImpactUnavailableSourceTransitionsHTTP(t *testing.T) {
 		})
 	}
 }
+
+// TestThriftOperationImpactExactHTTP is the PHEBS-45 end-to-end check: under
+// the Thrift claim alone, a published thrift-caller generation is reported
+// through the same operation report route with the same conclusion states and
+// shared citations, the capability is advertised, and a protobuf endpoint is
+// refused before any caller read.
+func TestThriftOperationImpactExactHTTP(t *testing.T) {
+	fixture := newExactCallerAPIFixtureFor(t, 2, exactCallerRepository, t.TempDir(), nil, nil, thriftExactCaller)
+	opts := fixture.serviceOptions()
+	opts.CallerMap = fixture.service
+	opts.ThriftOperationImpactEnabled = true
+	opts.OperationImpact = api.NewOperationImpactService(opts)
+	if opts.OperationImpact == nil {
+		t.Fatal("Thrift operation Impact service not constructed")
+	}
+	handler := api.New(opts)
+	values := url.Values{"shape": {"operation_callers"}, "protocol": {"thrift"}, "repository": {fixture.repository}, "lineage": {exactCallerLineage}, "operation": {thriftExactCaller.operation}, "page_size": {"2"}}
+	var report api.OperationImpactReport
+	code, body := catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), &report)
+	if code != http.StatusOK || report.SchemaVersion != api.OperationImpactSchemaVersion || report.Conclusion.State != "evidence_present" || len(report.CallerPage.Rows) != 2 || report.Conclusion.Query.Endpoint.Protocol != "thrift" {
+		t.Fatalf("Thrift report status=%d body=%s report=%+v", code, body, report)
+	}
+	for _, row := range report.CallerPage.Rows {
+		if row.Protocol != "thrift" || row.Classification != "resolved_caller" || row.Operation != thriftExactCaller.operation {
+			t.Fatalf("Thrift report row = %+v", row)
+		}
+	}
+	if report.UnavailableSections.WireVerdict != "not_in_supported_shape" || report.UnavailableSections.FieldReferences != "not_in_supported_shape" {
+		t.Fatalf("Thrift report enabled an unsupported section: %+v", report.UnavailableSections)
+	}
+	citation, err := fixture.service.ReadCitation(t.Context(), report.CallerPage.Rows[0].Source.Citation)
+	if err != nil || !strings.HasPrefix(citation.Content, "call0000") {
+		t.Fatalf("shared Thrift citation=%+v err=%v", citation, err)
+	}
+	values.Set("owner", "no-owner")
+	code, body = catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), &report)
+	if code != http.StatusOK || report.Conclusion.State != "exact_empty" {
+		t.Fatalf("Thrift empty=%d %s", code, body)
+	}
+	values.Del("owner")
+	var version struct {
+		Capabilities []string `json:"capabilities"`
+	}
+	if code, body := catalogHTTP(t, handler, "/api/version", &version); code != http.StatusOK || !strings.Contains(strings.Join(version.Capabilities, ","), "contract-impact-operation") {
+		t.Fatalf("capability under the Thrift claim = %d %s", code, body)
+	}
+	reads := fixture.store.publicationReads
+	values.Set("protocol", "protobuf")
+	values.Set("operation", exactCallerOperation)
+	code, body = catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), nil)
+	if code != http.StatusBadRequest || !strings.Contains(body, "exact thrift endpoint") || fixture.store.publicationReads != reads {
+		t.Fatalf("protobuf endpoint under the Thrift claim = %d %s (reads %d -> %d)", code, body, reads, fixture.store.publicationReads)
+	}
+}
