@@ -26,7 +26,11 @@ func TestHostFormatterProcessHelper(t *testing.T) {
 	}
 	ready := os.Getenv("PHEBS_HOST_FORMATTER_READY")
 	if mode == "leaf" {
-		if os.WriteFile(ready, []byte(strconv.Itoa(os.Getpid())), 0600) != nil {
+		// Publish the PID atomically: the parent and the intermediate owner
+		// poll only for the file's existence, so a plain WriteFile (create,
+		// then write) let them read an empty PID.
+		staged := ready + ".tmp"
+		if os.WriteFile(staged, []byte(strconv.Itoa(os.Getpid())), 0600) != nil || os.Rename(staged, ready) != nil {
 			os.Exit(41)
 		}
 		for {
