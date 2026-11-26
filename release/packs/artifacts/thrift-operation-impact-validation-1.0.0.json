@@ -1,0 +1,103 @@
+{
+ "schema": "phebs-final-release-validation-v1",
+ "pack_id": "phebs.thrift.impact.operation",
+ "pack_claim_version": "1.0.0",
+ "source_commit": "20b22465ce9a5cc5de1f15ca1e9bf20946a0163f",
+ "binary_digest": "sha256:b59e264c60d9bcbc0435ff98e498b458f7f9e2fce169132f915dd9daf387faff",
+ "binary_digest_scope": "CGO_ENABLED=0 go build -trimpath ./cmd/phebs at source_commit with go1.26.5 linux/amd64 on the test host; the released runtime is bound separately by its signed record.",
+ "qualification_artifact_id": null,
+ "qualification": "bounded-integration-tests (Ben's 2026-11-08 acceptance rule); no blind-label round",
+ "historical_measurement_scope": "No new extraction, measurement or truth population. The operation Impact report (contract-impact-operation-v1) is unchanged; it is one unmodified exact Thrift Caller Map page from the released phebs.thrift.caller.go. Only the per-protocol claim fence, admission and the UI protocol gates are new.",
+ "current_checks": [
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./cmd/phebs",
+    "-count=1",
+    "-timeout=180s",
+    "-run",
+    "^Test(ThriftOperationImpact.*|OperationImpact.*|ThriftCallerComparison.*|ThriftCallerMap.*|CallerMapPackIdentityAndRecipeFrozen|CallerMapReleased.*|CallerComparisonReleasedAdmission|ChangeImpactReleasedAdmission|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix|MergeExtractorsReleasedGovernsDomain|ReleaseLoadBindingsForDerivesEveryField|SignReleaseDerivesBindingsAndSelfVerifies)$"
+   ],
+   "pid": 1278091,
+   "actual_wait": 0,
+   "seconds": 3.9440762996673584,
+   "tests_passed": 121,
+   "tests_skipped": 0,
+   "log_sha256": "b730a167ee1620defc19ab66827205939aea366cde75958401e09cbf6e5ebef7"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/api",
+    "-count=1",
+    "-timeout=180s",
+    "-run",
+    "^Test(.*OperationImpact.*|Exact(Thrift)?CallerMap.*|.*CallerComparison.*)$"
+   ],
+   "pid": 1278165,
+   "actual_wait": 0,
+   "seconds": 7.645264625549316,
+   "tests_passed": 122,
+   "tests_skipped": 0,
+   "log_sha256": "4b12224a0eec0655c2d234eb83e255a47be28bab7419eb65fc19f88b54c4267d"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/packrelease",
+    "-count=1",
+    "-timeout=90s"
+   ],
+   "pid": 1278975,
+   "actual_wait": 0,
+   "seconds": 0.6007928848266602,
+   "tests_passed": 106,
+   "tests_skipped": 0,
+   "log_sha256": "f0e7a82599a923fe1d29e2f64f701c2a0e9b9fd118daa269acd284c6f4ab39d2"
+  },
+  {
+   "command": [
+    "npx",
+    "--prefix",
+    "ui",
+    "vitest",
+    "run",
+    "--root",
+    "ui",
+    "--reporter=json",
+    "src/operationImpactContract.test.ts",
+    "src/operationImpactApi.test.ts",
+    "src/pages/OperationImpactPage.test.tsx",
+    "src/pages/CallerMapPage.test.tsx",
+    "src/pages/ContractAtlasPage.test.tsx"
+   ],
+   "pid": 1279076,
+   "actual_wait": 0,
+   "seconds": 6.232111930847168,
+   "tests_passed": 157,
+   "tests_skipped": 0,
+   "log_sha256": "d969e809644c0cfa75dd568a108f0dbd138a7fc1a2d5cc3724ceb56d33b758bf"
+  }
+ ],
+ "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
+ "review": {
+  "source": "PHEBS-45 binds phebs.thrift.impact.operation to build_operation_impact_report@contract-impact-operation-v1+thrift, a claim with no extractor, admitted only beside the current released Thrift Caller Map recipe (thrift-contract@1.1.2 plus thrift-caller@1.6.0-released.1) as the running extractors, through the check shared with Thrift caller comparison. Admission matrix covers dark, joint, beside the Thrift Atlas and comparison, claim alone, Thrift Caller Map alone, beside only the protobuf Caller Map, beside protobuf operation Impact, revoked, Thrift revoked beside protobuf, suspended, expired, experimental Thrift cannot substitute, an old or missing Thrift extractor and an unsupported claim version.",
+  "evidence": "Under the protobuf claim, the Thrift claim and both, each endpoint protocol is admitted or refused as specified; a refused protocol answers 400 naming the served protocols and reads no caller page. A published thrift-caller generation is reported end to end over HTTP as evidence_present with Thrift-only rows and a shared citation, and as exact_empty under a non-matching owner; the capability is advertised and a protobuf endpoint is refused without a caller read under the Thrift claim alone. The UI view, Contract Atlas and Caller Map links and the report validator accept Thrift, and the validator refuses a row whose protocol differs from the requested endpoint. A mutation letting the protobuf claim admit Thrift endpoints fails these tests.",
+  "security": "Existing authenticated visibility/source/generation/citation fences, signed binary/artifact bindings and identity checks retained. Each protocol is served only under its own released claim; unsupported report sections stay not_in_supported_shape.",
+  "steady_state_cost": "One protocol membership check per report request and one extractor-version scan at startup. No new worker, cache, lock, child, timer, index or schema, and no ceiling raised."
+ },
+ "not_established": [
+  "Precision, recall or attribution accuracy of Thrift caller resolution",
+  "Completeness: exact_empty never proves caller absence",
+  "Runtime or deployment impact, safe retirement",
+  "thriftrw, YARPC, Kitex or fbthrift generated clients",
+  "Linux capacity, scale or latency/throughput SLO"
+ ],
+ "expires_at": "2027-01-12T23:59:59Z"
+}
