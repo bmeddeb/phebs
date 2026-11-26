@@ -1,0 +1,128 @@
+{
+ "schema": "phebs-final-release-validation-v1",
+ "pack_id": "phebs.thrift.caller.go",
+ "pack_claim_version": "1.1.0",
+ "source_commit": "cfc1e05ec7ae3c3f10beaa460c4d5f4b1aad8a27",
+ "binary_digest": "sha256:2231033da8de625e8bf17dcb2328d67734c2d4db042e676ebd173144889811df",
+ "binary_digest_scope": "CGO_ENABLED=0 go build -trimpath ./cmd/phebs at source_commit with go1.26.5 linux/amd64 on the test host; the released runtime is bound separately by its signed record.",
+ "qualification_artifact_id": null,
+ "qualification": "bounded-integration-tests (Ben's 2026-11-08 acceptance rule); no blind-label round",
+ "historical_measurement_scope": "No new extraction, measurement or truth population. thrift-caller 1.6.0 and its released admission version are unchanged; claim 1.1.0 adds thriftrw/YARPC clients through the resolver catalog's hash-verified provenance.",
+ "current_checks": [
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./cmd/phebs",
+    "-count=1",
+    "-timeout=300s",
+    "-run",
+    "^Test(Thrift.*|CallerMapPackIdentityAndRecipeFrozen|CallerMapReleased.*|CallerComparisonReleasedAdmission|OperationImpact.*|ChangeImpactReleasedAdmission|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix|MergeExtractorsReleasedGovernsDomain|ReleaseLoadBindingsForDerivesEveryField|SignReleaseDerivesBindingsAndSelfVerifies)$"
+   ],
+   "pid": 1791016,
+   "actual_wait": 0,
+   "seconds": 3.9051806926727295,
+   "tests_passed": 121,
+   "tests_skipped": 0,
+   "log_sha256": "aa68b3bcb622bd2f593d01fdadd11c8911046f70cf5c020dede98a5f8687fdd2"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/resolvermaterialize",
+    "-count=1",
+    "-timeout=300s"
+   ],
+   "pid": 1791093,
+   "actual_wait": 0,
+   "seconds": 5.3775153160095215,
+   "tests_passed": 184,
+   "tests_skipped": 0,
+   "log_sha256": "004e2a1fa9c5069c8b466ca70d66d862ddbe41a92bdbf6503c7919d30f48e85f"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/extract/extractors/gocaller",
+    "-count=1",
+    "-timeout=180s"
+   ],
+   "pid": 1791447,
+   "actual_wait": 0,
+   "seconds": 0.8584215641021729,
+   "tests_passed": 23,
+   "tests_skipped": 0,
+   "log_sha256": "ce8f6704cafcef88c0690d84ffd9bc64eed1711ff990d539ecf15faf651165a1"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/api",
+    "-count=1",
+    "-timeout=300s",
+    "-run",
+    "^Test(.*Thrift.*|Exact(Thrift)?CallerMap.*|.*CallerComparison.*|.*OperationImpact.*)$"
+   ],
+   "pid": 1791520,
+   "actual_wait": 0,
+   "seconds": 7.762510061264038,
+   "tests_passed": 158,
+   "tests_skipped": 0,
+   "log_sha256": "7a6e534461444c4eb64e9c70717c4c2cbf8337beed2bedc769ba7d534d480a4b"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/callerexecute",
+    "-count=1",
+    "-timeout=180s"
+   ],
+   "pid": 1792283,
+   "actual_wait": 0,
+   "seconds": 1.597132921218872,
+   "tests_passed": 127,
+   "tests_skipped": 1,
+   "log_sha256": "8d940a2e0f9b311ede63003572bd87935fd7ec065f5db7e21bd1033ac4c4f626"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/packrelease",
+    "-count=1",
+    "-timeout=90s"
+   ],
+   "pid": 1792362,
+   "actual_wait": 0,
+   "seconds": 0.5944457054138184,
+   "tests_passed": 106,
+   "tests_skipped": 0,
+   "log_sha256": "15df0c56ac85b3e85f2fd30507717c4f7e6f6a3217e906340c5fd9eaaab5d96f"
+  }
+ ],
+ "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
+ "review": {
+  "source": "PHEBS-46 keeps phebs.thrift.caller.go bound to thrift-contract@1.1.2 plus thrift-caller@1.6.0-released.1 and moves its claim to 1.1.0. The resolver catalog (pack 1.4.0, policy thriftrw-yarpc-module-package-sha1-v1) relates a thriftrw-plugin-yarpc client to a .thrift declaration only when the one thriftrw package its Helper.Args calls go through, located through the repository's go.mod modules, embeds ThriftModule{Package: that import path, FilePath, SHA1} and exactly one declared .thrift file at FilePath has that content SHA-1. The admission matrix is unchanged and re-run.",
+  "evidence": "With no generated-from snapshot, a YARPC client modelled on yarpc-go output resolves callers held from echoclient.New(...) and as an echoclient.Interface value, end to end through materialization, publication and the direct-syntax scan, with the Thrift method spelling (Go PingTwice is ping_twice). A hash mismatch and an ambiguous match are explicit abstentions; a client without a module is not described; an explicit generated-from mapping governs. A mutation dropping the SHA-1 comparison fails these tests. The describer, run once over all 19 real yarpc-go clients at 7000bc61, described 15 (49 symbols); the other 4 are empty or extends-only services.",
+  "security": "Existing authenticated visibility/source/generation/citation fences, signed binary/artifact bindings and identity checks retained. The relation is verified by content hash; nothing is inferred from directory names.",
+  "steady_state_cost": "At catalog build only: one bounded read per .go file named client.go in a directory ending in client, one parse per referenced thriftrw module file and one content read per candidate .thrift file, within the existing blob read and byte budgets, plus a 4,096-client bound. The resolver pack bump re-materializes each catalog once. Nothing per query or sync tick."
+ },
+ "not_established": [
+  "Precision, recall or attribution accuracy of Thrift caller resolution",
+  "Completeness: an absent caller is not proven absent",
+  "Kitex or fbthrift clients; thriftrw/YARPC clients without a committed .thrift whose SHA-1 matches; methods inherited through extends",
+  "Runtime or deployment usage, safe retirement",
+  "Linux capacity, scale or latency/throughput SLO"
+ ],
+ "expires_at": "2027-01-12T23:59:59Z"
+}
