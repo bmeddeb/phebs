@@ -99,6 +99,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-25, `218a1562`) releases caller comparison for Thrift-to-Thrift
     endpoint pairs as `phebs.thrift.caller.comparison` (PHEBS-44), verified on
     `dave` against gohive's root and `v2/` TCLIService.
+    [`v0.3.12`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.12)
+    (2026-11-26, `6e1cc89b`) releases operation Impact for Thrift endpoints as
+    `phebs.thrift.impact.operation` (PHEBS-45), verified on `dave` against
+    gohive TCLIService.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -19674,6 +19678,30 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     cards keep their "operation Impact stays protobuf-only" lines byte for byte
     (their digests are bound); the new card supersedes them for Thrift
     endpoints only.
+  - **Gate findings (2026-11-26).** Three `ci-go` failures on the way were
+    defects, not flakes, each fixed in its own commit: the typedsandbox
+    formatter helper published its PID non-atomically (`1aaddab0`), and the
+    two store robustness fixes recorded below (`d493da83`, `efb5ec85`). The
+    release head `6e1cc89b` passed all three gates.
+  - **Verified (2026-11-26).** `v0.3.12` was published from `6e1cc89b`
+    (runtime sha256 `28cc9bb1…`) and installed on `dave` from the downloaded
+    archive with an unchanged config. Before the upgrade a Thrift report
+    answered 400; the 13 capabilities are unchanged, every pack was admitted,
+    and no repository was re-planned.
+    - All 23 gohive TCLIService operations answered on both lineages: the root
+      `thrift/HiveServer.thrift` with 9 `evidence_present` and 14
+      `exact_empty`, `v2/` with 7 and 16. The 16 `resolved_caller` rows are
+      the Thrift Caller Map's, plus 4 `extractor_abstention` rows per lineage
+      on `GetColumns`. Every row is Thrift, and the other sections stay
+      `not_in_supported_shape`. `ExecuteStatement` cites `hive.go:619`, and
+      the citation reads.
+    - A `grpc` endpoint answered 400 naming protobuf or Thrift, and protobuf
+      operation Impact (t2114 `Search`) was unchanged. Every job succeeded and
+      there was no panic.
+    - `dave` selects both claims, so a protobuf endpoint refused under the
+      Thrift claim alone is covered by the integration tests only.
+    - Receipts are in `~/phebs-instance/receipts/phebs45-2026-11-26/` on
+      `dave`.
 
 - **2026-11-26 — Supervised SurrealDB startup also detects a silently held port.**
   A PHEBS-45 `ci-go` run failed `TestCallerLeafWriterMarkerAndGenerationGuard`:
