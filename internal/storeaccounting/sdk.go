@@ -3,6 +3,7 @@ package storeaccounting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"strings"
 	"sync"
@@ -515,6 +516,7 @@ type sdkSender interface {
 
 func SDKQuery[T any, S sdkSender](ctx context.Context, owner *SDKOwner, sender S, sql string, vars map[string]any, recipe SDKQueryRecipe) (result *[]surrealdb.QueryResult[T], err error) {
 	if owner == nil {
+		defer recoverUnownedSDK(&err)
 		return surrealdb.Query[T](ctx, sender, sql, vars)
 	}
 	if !recipe.supported || recipe.rows > MaximumRows || recipe.read && recipe.rows != 0 || sql == "" {
@@ -561,8 +563,18 @@ func SDKQuery[T any, S sdkSender](ctx context.Context, owner *SDKOwner, sender S
 	return surrealdb.Query[T](context.WithValue(ctx, storeCallContextKey{}, call), sender, sql, nil)
 }
 
+// recoverUnownedSDK gives an unaccounted SDK call the owned path's panic
+// handling. The SDK can dereference a missing reply on a closed connection;
+// that becomes a non-terminal ErrProtocol instead of crashing the caller.
+func recoverUnownedSDK(err *error) {
+	if recovered := recover(); recovered != nil {
+		*err = fmt.Errorf("%w: unowned SurrealDB SDK call panicked: %v", ErrProtocol, recovered)
+	}
+}
+
 func SDKBegin(ctx context.Context, owner *SDKOwner, db *surrealdb.DB) (tx *surrealdb.Transaction, err error) {
 	if owner == nil {
+		defer recoverUnownedSDK(&err)
 		return db.Begin(ctx)
 	}
 	call, err := owner.acquire(ctx, Begin, nil)
@@ -589,6 +601,7 @@ func SDKCancel(ctx context.Context, owner *SDKOwner, tx *surrealdb.Transaction) 
 }
 func storeTerminal(ctx context.Context, owner *SDKOwner, tx *surrealdb.Transaction, kind Kind) (err error) {
 	if owner == nil {
+		defer recoverUnownedSDK(&err)
 		if kind == Commit {
 			return tx.Commit(ctx)
 		}
