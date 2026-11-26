@@ -19815,3 +19815,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       generations, and every job succeeded.
     - Receipts are in `~/phebs-instance/receipts/phebs46-2026-11-26/` on
       `dave`.
+
+- **2026-11-26 — Supervised SurrealDB startup also retries a child that exits before `/health`.**
+  The PHEBS-46 docs-gate `ci-go` failed `TestCallerLeafWriterMarkerAndGenerationGuard`
+  again under load: the child died with "Address already in use", but the
+  process holding the port had released it before attribution, so the exit
+  carried no proof of loss and the 2026-11-26 fix returned at once. An exit
+  without a listener before `/health` is now retried on a fresh port within the
+  same three-attempt bound, as the 2026-11-10 test fixtures already do. A
+  genuine crash fails the same way on every attempt, and its error
+  (`errChildExitedBeforeHealth`) is what startup returns. Rejected: teeing the
+  child's stderr to retry only on a printed bind conflict, which rewires a
+  production process's stdio for a load race. Ships in the release after
+  `v0.3.13`.
+  - **Cost:** at most two extra child starts at engine start when a child
+    exits early; nothing at steady state.

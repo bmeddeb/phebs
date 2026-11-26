@@ -875,7 +875,8 @@ func startOwnedEngine(ctx context.Context, engine string) (runtime LocalRuntime,
 			break
 		}
 		owned.stop()
-		if !errors.Is(err, errLoopbackPortLost) || attempt == localPortAttempts {
+		retryable := errors.Is(err, errLoopbackPortLost) || errors.Is(err, errChildExitedBeforeHealth)
+		if !retryable || attempt == localPortAttempts {
 			return LocalRuntime{}, nil, err
 		}
 	}
@@ -1141,6 +1142,13 @@ const localPortAttempts = 3
 // answered on the child's address: the child lost the port before binding it.
 var errLoopbackPortLost = errors.New("surreal child lost its loopback port to another process")
 
+// errChildExitedBeforeHealth reports that the started child exited without a
+// listener before answering /health. A bind conflict whose holder has already
+// released the port looks exactly like this, so startup retries it on a fresh
+// port within the same bound as a proven loss; a genuine crash fails the same
+// way on every attempt and this error is returned.
+var errChildExitedBeforeHealth = errors.New("surreal child exited before serving /health")
+
 // pickLoopbackAddr is a test seam over reserveLoopbackAddr.
 var pickLoopbackAddr = reserveLoopbackAddr
 
@@ -1185,7 +1193,7 @@ func waitHealthy(ctx context.Context, addr string, pid int) error {
 		case errors.Is(err, loopbackowner.ErrForeign):
 			return fmt.Errorf("%w: %s", errLoopbackPortLost, addr)
 		case errors.Is(err, loopbackowner.ErrExited):
-			return fmt.Errorf("surreal child on %s exited before serving /health", addr)
+			return fmt.Errorf("%w: %s", errChildExitedBeforeHealth, addr)
 		case healthy && !errors.Is(err, loopbackowner.ErrNotListening):
 			return fmt.Errorf("verify surreal child listener on %s: %w", addr, err)
 		}

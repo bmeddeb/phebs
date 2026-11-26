@@ -146,3 +146,58 @@ func TestStartOwnedEngineRetriesPortHeldBySilentListener(t *testing.T) {
 		t.Fatalf("a silently held port took %s to detect; the health deadline is 15s", elapsed)
 	}
 }
+
+// TestStartOwnedEngineRetriesChildThatExitsBeforeHealth reproduces the
+// PHEBS-46 docs-gate flake: the child died with "Address already in use", but
+// the holder had released the port before attribution, so the exit carried no
+// proof of loss and startup failed at once. An early exit is retried on a
+// fresh port within the same bound. A port the child cannot bind (a
+// privileged port for an unprivileged child) exits it the same way.
+func TestStartOwnedEngineRetriesChildThatExitsBeforeHealth(t *testing.T) {
+	if _, err := findSurrealBinary(true); err != nil {
+		t.Fatal("required real SurrealDB fixture:", err)
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("a privileged port is bindable as root")
+	}
+	original := pickLoopbackAddr
+	t.Cleanup(func() { pickLoopbackAddr = original })
+	for _, test := range []struct {
+		name     string
+		bad      int
+		wantErr  bool
+		wantPick int
+	}{
+		{name: "exits once then a fresh port", bad: 1, wantPick: 2},
+		{name: "exits on every bounded attempt", bad: localPortAttempts, wantErr: true, wantPick: localPortAttempts},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			picks := 0
+			pickLoopbackAddr = func() (string, error) {
+				picks++
+				if picks <= test.bad {
+					return "127.0.0.1:1", nil
+				}
+				return original()
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), childPassTestTimeout)
+			defer cancel()
+			s, err := OpenLocalMemory(ctx, t.TempDir())
+			if s != nil {
+				t.Cleanup(func() { _ = s.Close(context.Background()) })
+			}
+			if picks != test.wantPick {
+				t.Fatalf("picked %d ports, want %d (open error: %v)", picks, test.wantPick, err)
+			}
+			if test.wantErr {
+				if !errors.Is(err, errChildExitedBeforeHealth) || s != nil {
+					t.Fatalf("OpenLocalMemory = %v, %v; want the early-exit error", s, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("OpenLocalMemory after an early exit: %v", err)
+			}
+		})
+	}
+}
