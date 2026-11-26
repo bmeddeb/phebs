@@ -19674,3 +19674,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     cards keep their "operation Impact stays protobuf-only" lines byte for byte
     (their digests are bound); the new card supersedes them for Thrift
     endpoints only.
+
+- **2026-11-26 — Supervised SurrealDB startup also detects a silently held port.**
+  A PHEBS-45 `ci-go` run failed `TestCallerLeafWriterMarkerAndGenerationGuard`:
+  another process held the picked port, the child died with "Address already
+  in use", and because that process never answered `/health`, `waitHealthy`
+  polled until its 15 s deadline and returned a generic error, so the
+  2026-11-10 fresh-port retry never ran. `waitHealthy` now attributes the
+  listener on every poll, not only after a healthy answer: a foreign listener
+  is the proven port loss (retried on a fresh port, at most three attempts, as
+  before), and a child that exited with no listener fails at once. Each
+  `/health` request is bounded at one second; without that bound a listener
+  that accepts and never answers held startup forever (the new regression test
+  hangs on the old code).
+  - **Cost:** one read of `net/tcp`, `net/tcp6` and the child's fd table per
+    50 ms poll while the child is not yet healthy, at engine start only.
+    Nothing is added per query, sync tick or request.
+- **2026-11-26 — Unaccounted SDK calls return a panic as ErrProtocol.**
+  The same run panicked `TestTypedRuntimeTransientBeforeNative`: on a closed
+  connection the SurrealDB Go SDK (v1.5.1) can return no reply and no error,
+  then dereference the missing reply. The accounted `SDKQuery`, `SDKBegin` and
+  commit/cancel paths already convert such a panic into `ErrProtocol`; their
+  unaccounted branches (`owner == nil`) now do the same, so the caller sees a
+  non-terminal error instead of a crash.
+  - **Cost:** one deferred function per unaccounted SDK call.
