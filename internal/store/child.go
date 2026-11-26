@@ -1155,10 +1155,17 @@ func reserveLoopbackAddr() (string, error) {
 	return addr, l.Close()
 }
 
+// healthProbe bounds each /health request, so a listener that accepts but
+// never answers cannot hold startup past waitHealthy's deadline.
+var healthProbe = &http.Client{Timeout: time.Second}
+
 // waitHealthy waits for the child pid to serve /health on addr. A healthy
 // answer is accepted only once the listener is proven to be pid's; where the
 // platform cannot attribute listeners (loopbackowner.ErrUnsupported) the
-// answer is accepted unverified, as before.
+// answer is accepted unverified, as before. Without a healthy answer the
+// listener is attributed too: a port another process holds is the same proven
+// loss whether or not that process answers /health, and a child that exited
+// without a listener fails at once instead of after the deadline.
 func waitHealthy(ctx context.Context, addr string, pid int) error {
 	deadline := time.Now().Add(15 * time.Second)
 	url := "http://" + addr + "/health"
@@ -1166,21 +1173,24 @@ func waitHealthy(ctx context.Context, addr string, pid int) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		resp, err := http.Get(url) //nolint:gosec // loopback child, constructed addr
+		resp, err := healthProbe.Get(url)
+		healthy := false
 		if err == nil {
 			_ = resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				switch err := loopbackowner.Check(pid, addr); {
-				case err == nil, errors.Is(err, loopbackowner.ErrUnsupported):
-					return nil
-				case errors.Is(err, loopbackowner.ErrForeign):
-					return fmt.Errorf("%w: %s", errLoopbackPortLost, addr)
-				case !errors.Is(err, loopbackowner.ErrNotListening):
-					return fmt.Errorf("verify surreal child listener on %s: %w", addr, err)
-				}
-				// The answering listener closed before attribution; poll again.
-			}
+			healthy = resp.StatusCode == http.StatusOK
 		}
+		switch err := loopbackowner.Check(pid, addr); {
+		case healthy && (err == nil || errors.Is(err, loopbackowner.ErrUnsupported)):
+			return nil
+		case errors.Is(err, loopbackowner.ErrForeign):
+			return fmt.Errorf("%w: %s", errLoopbackPortLost, addr)
+		case errors.Is(err, loopbackowner.ErrExited):
+			return fmt.Errorf("surreal child on %s exited before serving /health", addr)
+		case healthy && !errors.Is(err, loopbackowner.ErrNotListening):
+			return fmt.Errorf("verify surreal child listener on %s: %w", addr, err)
+		}
+		// Not yet listening, or the answering listener closed before
+		// attribution; poll again.
 		time.Sleep(50 * time.Millisecond)
 	}
 	return fmt.Errorf("surreal child on %s not healthy after 15s", addr)

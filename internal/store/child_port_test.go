@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"net"
 	"os"
 	"os/exec"
 	"testing"
@@ -84,4 +85,64 @@ func startForeignSurrealForTest(t *testing.T, binary string) string {
 		return cmd
 	})
 	return addr
+}
+
+// TestStartOwnedEngineRetriesPortHeldBySilentListener reproduces the PHEBS-45
+// gate flake: under load another process held the picked port, the child
+// died with "Address already in use", and that process never answered
+// /health, so startup waited out its whole deadline instead of retrying. A
+// listener that accepts and never answers is the same proven port loss, and
+// the next attempt on a fresh port must succeed well before the deadline.
+func TestStartOwnedEngineRetriesPortHeldBySilentListener(t *testing.T) {
+	if _, err := findSurrealBinary(true); err != nil {
+		t.Fatal("required real SurrealDB fixture:", err)
+	}
+	silent, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = silent.Close() })
+	held := make(chan net.Conn, 16)
+	go func() {
+		for {
+			conn, acceptErr := silent.Accept()
+			if acceptErr != nil {
+				return
+			}
+			held <- conn // keep it open and never answer
+		}
+	}()
+	t.Cleanup(func() {
+		for {
+			select {
+			case conn := <-held:
+				_ = conn.Close()
+			default:
+				return
+			}
+		}
+	})
+	original := pickLoopbackAddr
+	t.Cleanup(func() { pickLoopbackAddr = original })
+	picks := 0
+	pickLoopbackAddr = func() (string, error) {
+		picks++
+		if picks == 1 {
+			return silent.Addr().String(), nil
+		}
+		return original()
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), childPassTestTimeout)
+	defer cancel()
+	started := time.Now()
+	s, err := OpenLocalMemory(ctx, t.TempDir())
+	if s != nil {
+		t.Cleanup(func() { _ = s.Close(context.Background()) })
+	}
+	if err != nil || picks != 2 {
+		t.Fatalf("OpenLocalMemory after a silently held port = %v after %d picks", err, picks)
+	}
+	if elapsed := time.Since(started); elapsed >= 10*time.Second {
+		t.Fatalf("a silently held port took %s to detect; the health deadline is 15s", elapsed)
+	}
 }
