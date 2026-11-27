@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PackVersion = "1.4.0"
+	PackVersion = "1.5.0"
 
 	GoModulePackName            = "go-module"
 	GRPCGeneratedPackName       = "grpc-generated-attribution"

@@ -62,6 +62,24 @@ var extractorImportAllowlist = map[string]bool{
 	// receipt dimension. The envelope is pure value construction, recursively
 	// constrained by TestPipelineRefusalImports.
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal": true,
+	// PHEBS-47: thriftrw ThriftModule descriptor and embedded-IDL decoding,
+	// pure parsing over supplied content, recursively constrained by
+	// TestThriftRWModuleImports.
+	"github.com/bmeddeb/phebs/internal/thriftrwmodule": true,
+}
+
+var thriftRWModuleImportAllowlist = map[string]bool{
+	"crypto/sha1":  true,
+	"encoding/hex": true,
+	"errors":       true,
+	"fmt":          true,
+	"go/ast":       true,
+	"go/parser":    true,
+	"go/token":     true,
+	"regexp":       true,
+	"strconv":      true,
+	"strings":      true,
+	"unicode/utf8": true,
 }
 
 var sdkImportAllowlist = map[string]bool{"context": true}
@@ -341,4 +359,19 @@ func scanPureTargets(
 		}
 	}
 	return violations, nil
+}
+
+// The thriftrw module reader is shared with the declaration extractor; keep
+// its transitive surface to pure parsing and hashing (PHEBS-47).
+func TestThriftRWModuleImports(t *testing.T) {
+	violations, err := scanPureTargets(
+		os.DirFS(".."),
+		[]pureSourceTarget{{dir: "thriftrwmodule", allowed: thriftRWModuleImportAllowlist}},
+	)
+	if err != nil {
+		t.Fatalf("scan thriftrw module reader: %v", err)
+	}
+	for _, violation := range violations {
+		t.Error(violation)
+	}
 }

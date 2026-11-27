@@ -37,7 +37,8 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 			plane:               candidate.PlaneLocal,
 			maxRecords:          contractMaxRecords,
 			executionMaxRecords: contractMaxRecords,
-			yes:                 []string{"api.thrift"}, no: []string{"api.go"},
+			yes:                 []string{"api.thrift", ".gen/go/cadence/cadence.go", "echo/echo.go"},
+			no:                  []string{"api.go", "echo/client.go", "echo/echo_test.go", "echo.go"},
 		},
 		{
 			domain: "thrift-consumer", enumeration: thriftConsumerEnumeration,

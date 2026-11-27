@@ -13,7 +13,7 @@ import (
 const (
 	protoContractEnumeration  = "proto-contract-paths-v1"
 	grpcConsumerEnumeration   = "grpc-consumer-paths-v2"
-	thriftContractEnumeration = "thrift-contract-paths-v1"
+	thriftContractEnumeration = "thrift-contract-paths-v2"
 	thriftConsumerEnumeration = "thrift-consumer-paths-v2"
 	scipProtoEnumeration      = "scip-proto-field-paths-v4"
 	scipThriftEnumeration     = "scip-thrift-field-paths-v4"
@@ -69,7 +69,9 @@ func CandidatePolicies(extractors []Extractor) ([]candidate.Policy, error) {
 			policy.MaxRecords = contractMaxRecords
 			policy.ExecutionPartitionPolicy = candidate.WholeRepositoryExecutionSubrangePolicy
 			policy.ExecutionMaxRecords = contractMaxRecords
-			policy.Enumerate = hasSuffix(".thrift")
+			policy.Enumerate = func(filePath string) bool {
+				return strings.HasSuffix(filePath, ".thrift") || ThriftRWModuleCandidatePath(filePath)
+			}
 		case "thrift-consumer":
 			policy.EnumerationPolicy = thriftConsumerEnumeration
 			policy.Enumerate = hasSuffix(".go")
@@ -133,4 +135,14 @@ func fixedRootCandidateSymlink(filePath string) bool {
 		}
 	}
 	return false
+}
+
+// ThriftRWModuleCandidatePath is the PHEBS-47 pre-filter for thriftrw module
+// sources, <dir>/<dir>.go; thriftdecl.IsEmbeddedModuleCandidate must agree.
+func ThriftRWModuleCandidatePath(filePath string) bool {
+	if !strings.HasSuffix(filePath, ".go") || strings.HasSuffix(filePath, "_test.go") {
+		return false
+	}
+	directory := path.Base(path.Dir(filePath))
+	return directory != "." && directory != "/" && path.Base(filePath) == directory+".go"
 }

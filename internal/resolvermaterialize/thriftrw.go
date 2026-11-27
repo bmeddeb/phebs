@@ -26,7 +26,7 @@ import (
 // abstention; nothing is inferred from directory names.
 
 // ThriftRWProvenance names the derivation rule; it is pack-version identity.
-const ThriftRWProvenance = "thriftrw-yarpc-module-package-sha1-v1"
+const ThriftRWProvenance = "thriftrw-yarpc-module-package-sha1-embedded-v2"
 
 // MaxThriftRWClients bounds the YARPC client candidates one catalog derives.
 const MaxThriftRWClients = 4_096
@@ -239,6 +239,13 @@ func emitThriftRWProvenance(
 			declaration, client.state, client.reason = selectThriftRWDeclaration(
 				module.module, declarationHashes,
 			)
+			// PHEBS-47: with no committed .thrift at FilePath, thrift-contract
+			// declares the module's digest-valid embedded IDL under the module
+			// file itself, which is then the declaration.
+			if client.reason == "thriftrw_declaration_not_declared" &&
+				len(targets.byPath[module.file.Path]) > 0 {
+				declaration, client.state, client.reason = module.file.Path, "", ""
+			}
 		}
 		var lineages []string
 		if client.state == "" {

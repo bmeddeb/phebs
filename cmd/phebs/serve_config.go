@@ -189,7 +189,7 @@ const callerComparisonPackID = "phebs.grpc.caller.comparison"
 // Thrift pairs stay unreleased.
 const (
 	thriftCallerComparisonPackID       = "phebs.thrift.caller.comparison"
-	thriftCallerComparisonClaimVersion = "1.1.0"
+	thriftCallerComparisonClaimVersion = "1.2.0"
 )
 const operationImpactPackID = "phebs.contract.impact.operation"
 const operationImpactClaimVersion = "1.0.0"
@@ -199,7 +199,7 @@ const operationImpactClaimVersion = "1.0.0"
 // Caller Map recipe (see releasedThriftOperationImpact).
 const (
 	thriftOperationImpactPackID       = "phebs.thrift.impact.operation"
-	thriftOperationImpactClaimVersion = "1.1.0"
+	thriftOperationImpactClaimVersion = "1.2.0"
 )
 
 // changeImpactPackID is the PHEBS-41 composed change-impact claim: the
@@ -562,7 +562,7 @@ func (releasedGRPCCaller) Version() string { return "1.6.0-released.1" }
 // operation Impact (thriftOperationImpactPackID, PHEBS-45).
 const (
 	thriftCallerMapPackID       = "phebs.thrift.caller.go"
-	thriftCallerMapClaimVersion = "1.1.0"
+	thriftCallerMapClaimVersion = "1.2.0"
 )
 
 // thriftCallerMapRecipe carries the Thrift declaration extractor for the same

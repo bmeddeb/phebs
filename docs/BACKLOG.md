@@ -21363,6 +21363,14 @@ callers unchanged. cadence stays unresolved: its IDL is not committed (option
 C would cover it). See the 2026-11-26 PHEBS-46 ADR in `PLAN.md`. Receipts are
 in `~/phebs-instance/receipts/phebs46-2026-11-26/` on `dave`.
 
+*PHEBS-47 (2026-11-27, in progress; Ben chose option C):* Thrift declarations
+from thriftrw's embedded IDL when the `.thrift` is not committed. A thriftrw
+module file (`<dir>/<dir>.go`) whose `sha1(Raw)` equals `ThriftModule.SHA1`
+declares its embedded IDL, cited in the Go literal's own bytes, unless a
+committed `.thrift` sits at its `FilePath`. `thrift-contract` 1.2.0; Thrift
+Atlas claim 1.1.0; Thrift caller claims 1.2.0; resolver pack 1.5.0. Target:
+cadence. See the 2026-11-27 PHEBS-47 ADR in `PLAN.md`.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

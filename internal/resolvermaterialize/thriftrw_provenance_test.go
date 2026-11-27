@@ -117,6 +117,7 @@ type yarpcFixture struct {
 	moduleSHA1    string
 	extraIDLPath  string // a second declared .thrift with the same name and content
 	snapshot      bool   // an explicit generated-from mapping names the client
+	embedded      bool   // PHEBS-47: no committed .thrift; the module file declares
 }
 
 func buildYARPCCatalog(t *testing.T, fixture yarpcFixture) *CallerResolverView {
@@ -132,9 +133,14 @@ func buildYARPCCatalog(t *testing.T, fixture yarpcFixture) *CallerResolverView {
 	files := []extract.CandidateManifestFile{
 		blobs.add("go.mod", "module \"example.test\"\n"),
 		blobs.add(yarpcCallerPath, yarpcCallerSource),
-		blobs.add(yarpcIDLPath, yarpcIDLContent),
 		blobs.add(yarpcModulePath, yarpcModuleSource(fixture.modulePackage, fixture.moduleSHA1)),
 		blobs.add(yarpcClientPath, yarpcClientInput),
+	}
+	declarationPath := yarpcIDLPath
+	if fixture.embedded {
+		declarationPath = yarpcModulePath
+	} else {
+		files = append(files, blobs.add(yarpcIDLPath, yarpcIDLContent))
 	}
 	if fixture.extraIDLPath != "" {
 		files = append(files, blobs.add(fixture.extraIDLPath, yarpcIDLContent))
@@ -147,14 +153,14 @@ func buildYARPCCatalog(t *testing.T, fixture yarpcFixture) *CallerResolverView {
 	thrift := materializeTestDeclaration(ProtocolThrift)
 	var rows []store.Assertion
 	for index, declared := range []struct{ path, object string }{
-		{yarpcIDLPath, "echo.Echo/echo"}, {yarpcIDLPath, "echo.Echo/ping_twice"},
+		{declarationPath, "echo.Echo/echo"}, {declarationPath, "echo.Echo/ping_twice"},
 		{fixture.extraIDLPath, "echo.Echo/echo"},
 	} {
 		if declared.path == "" {
 			continue
 		}
 		row := materializeTestAssertion(thrift.RunID, declared.path, yarpcLineage, index+1)
-		if declared.path != yarpcIDLPath {
+		if declared.path != declarationPath {
 			row.Lineage = "lineage-other-echo"
 		}
 		row.Object = declared.object
@@ -214,7 +220,7 @@ func scanYARPCCaller(t *testing.T, view *CallerResolverView) (calls, unresolved 
 // wire spelling (Go PingTwice is ping_twice), and callers holding
 // echoclient.New(...) or an echoclient.Interface value resolve.
 func TestThriftRWProvenanceResolvesYARPCCallers(t *testing.T) {
-	if PackVersion != "1.4.0" || ThriftRWProvenance != "thriftrw-yarpc-module-package-sha1-v1" ||
+	if PackVersion != "1.5.0" || ThriftRWProvenance != "thriftrw-yarpc-module-package-sha1-embedded-v2" ||
 		FrozenMaterializationPolicy().ThriftRWProvenance != ThriftRWProvenance ||
 		FrozenMaterializationPolicy().MaxThriftRWClients != MaxThriftRWClients {
 		t.Fatalf("thriftrw provenance identity = %q / %q", ThriftRWProvenance, PackVersion)
@@ -296,6 +302,30 @@ func TestThriftRWProvenanceDefersToExplicitMapping(t *testing.T) {
 	for _, descriptor := range view.Descriptors() {
 		if descriptor.ClientType == "Interface" {
 			t.Fatalf("derived provenance overrode an explicit mapping: %+v", descriptor)
+		}
+	}
+}
+
+// TestThriftRWProvenanceBindsEmbeddedDeclaration is the PHEBS-47 caller path:
+// with no committed .thrift, thrift-contract declares the module's embedded
+// IDL under the module file itself, and YARPC callers resolve to it.
+func TestThriftRWProvenanceBindsEmbeddedDeclaration(t *testing.T) {
+	view := buildYARPCCatalog(t, yarpcFixture{embedded: true})
+	for _, descriptor := range view.Descriptors() {
+		if descriptor.State != StateResolved || descriptor.DeclarationPath != yarpcModulePath ||
+			descriptor.DeclarationLineage != yarpcLineage {
+			t.Fatalf("%s descriptor = %+v, want resolved to the embedded declaration", descriptor.Method, descriptor)
+		}
+	}
+	calls, unresolved := scanYARPCCaller(t, view)
+	if want := []string{"/echo.Echo/echo", "/echo.Echo/ping_twice"}; !slices.Equal(calls, want) || len(unresolved) != 0 {
+		t.Fatalf("embedded YARPC calls = %v (unresolved %v), want %v", calls, unresolved, want)
+	}
+	// Without the embedded declaration the client stays an explicit abstention.
+	bare := buildYARPCCatalog(t, yarpcFixture{embedded: true, extraIDLPath: "unrelated/other.thrift"})
+	for _, descriptor := range bare.Descriptors() {
+		if descriptor.State != StateResolved {
+			t.Fatalf("embedded declaration ignored beside an unrelated file: %+v", descriptor)
 		}
 	}
 }

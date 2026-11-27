@@ -24,11 +24,12 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/idlpreflight"
+	"github.com/bmeddeb/phebs/internal/thriftrwmodule"
 )
 
 const (
 	domain        = "thrift-contract"
-	version       = "1.1.2"
+	version       = "1.2.0"
 	schemaVersion = "t19-v1"
 
 	// idl.Parse is in-process and does not accept a context. Preflight the
@@ -52,9 +53,22 @@ func New() sdk.Extractor { return thriftDecl{} }
 
 type thriftDecl struct{}
 
-func (thriftDecl) Domain() string                 { return domain }
-func (thriftDecl) Version() string                { return version }
-func (thriftDecl) Candidate(filePath string) bool { return strings.HasSuffix(filePath, ".thrift") }
+func (thriftDecl) Domain() string  { return domain }
+func (thriftDecl) Version() string { return version }
+func (thriftDecl) Candidate(filePath string) bool {
+	return strings.HasSuffix(filePath, ".thrift") || IsEmbeddedModuleCandidate(filePath)
+}
+
+// IsEmbeddedModuleCandidate pre-filters thriftrw module sources by the
+// generator's output name, <dir>/<dir>.go (PHEBS-47). The header, the
+// ThriftModule descriptor and its SHA-1 decide; this only bounds the reads.
+func IsEmbeddedModuleCandidate(filePath string) bool {
+	if !strings.HasSuffix(filePath, ".go") || strings.HasSuffix(filePath, "_test.go") {
+		return false
+	}
+	directory := path.Base(path.Dir(filePath))
+	return directory != "." && directory != "/" && path.Base(filePath) == directory+".go"
+}
 
 // ImplementationRevision records behaviour changes that keep the signed
 // reader version (PHEBS-37). Revision 1 is PHEBS-39: a file that declares one
@@ -155,24 +169,44 @@ func (thriftDecl) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit)
 	coverage := sdk.Coverage{Protocols: []string{
 		"lineage-provisional-repo-path-v1", "thrift",
 	}}
+	var committed []string
+	var modules []string
 	err := corpus.WalkFiles(ctx, func(relPath string) error {
+		if IsEmbeddedModuleCandidate(relPath) {
+			modules = append(modules, relPath)
+			return nil
+		}
 		if !strings.HasSuffix(relPath, ".thrift") {
 			return nil
 		}
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		committed = append(committed, relPath)
 		blob, err := corpus.Read(ctx, relPath)
 		if err != nil {
 			return fmt.Errorf("%s: read: %w", relPath, err)
 		}
-		unresolved, err := fileFacts(ctx, corpus, relPath, blob, emit)
+		unresolved, err := fileFacts(ctx, corpus, relPath, blob, nil, emit)
 		if err != nil {
 			return fmt.Errorf("%s: %w", relPath, err)
 		}
 		coverage.UnresolvedCount += unresolved
 		return nil
 	})
+	if err == nil {
+		// PHEBS-47: embedded IDL is a declaration source only after every
+		// committed .thrift is known, because a committed file governs.
+		sort.Strings(modules)
+		for _, relPath := range modules {
+			unresolved, embeddedErr := embeddedFacts(ctx, corpus, relPath, committed, emit)
+			if embeddedErr != nil {
+				err = fmt.Errorf("%s: %w", relPath, embeddedErr)
+				break
+			}
+			coverage.UnresolvedCount += unresolved
+		}
+	}
 	if err != nil {
 		// Candidate read/parse failures fail the whole staged run. Returning
 		// successful partial coverage would replace known evidence with a
@@ -207,7 +241,14 @@ type fileState struct {
 // fileFacts extracts one .thrift blob. The returned count is the number of
 // tier-unresolved facts emitted (file-level gaps), which the worker
 // reconciles against the coverage manifest.
-func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.Blob, emit sdk.Emit) (int, error) {
+func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.Blob, source *embeddedSource, emit sdk.Emit) (int, error) {
+	scopePath := relPath
+	if source != nil {
+		// Embedded IDL: blob carries the decoded IDL text under the Go file's
+		// digest; facts are remapped onto the Go file's bytes as they leave.
+		scopePath = source.filePath
+		emit = source.remap(emit)
+	}
 	if err := validateThriftComplexity(ctx, blob.Content); err != nil {
 		return 0, err
 	}
@@ -226,7 +267,7 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 	state := &fileState{
 		relPath: relPath,
 		blob:    blob,
-		scope:   scopeFor(program, relPath),
+		scope:   scopeFor(program, scopePath),
 		lineage: lineageID(corpus.RepoName(), relPath),
 		role:    roleFor(relPath),
 		lines:   lineStarts(blob.Content),
@@ -855,4 +896,76 @@ func lineStarts(content string) []int {
 		}
 	}
 	return starts
+}
+
+// embeddedSource carries one thriftrw module's decoded IDL back to the Go file
+// it is embedded in (PHEBS-47).
+type embeddedSource struct {
+	filePath string // ThriftModule.FilePath, for the scope rule
+	goBlob   sdk.Blob
+	offsets  []int // decoded IDL byte -> Go file byte
+	goLines  []int // Go file line starts
+}
+
+// remap rewrites a fact's byte span and line from decoded-IDL coordinates to
+// the Go file's own bytes.
+func (source *embeddedSource) remap(emit sdk.Emit) sdk.Emit {
+	return func(fact sdk.Fact) error {
+		if fact.Atom.StartByte < 0 || fact.Atom.EndByte > len(source.offsets)-1 ||
+			fact.Atom.StartByte > fact.Atom.EndByte {
+			return fmt.Errorf("embedded span %d..%d is outside the IDL", fact.Atom.StartByte, fact.Atom.EndByte)
+		}
+		start, end := source.offsets[fact.Atom.StartByte], source.offsets[fact.Atom.EndByte]
+		line := sort.Search(len(source.goLines), func(index int) bool { return source.goLines[index] > start })
+		fact.Atom.BlobDigest = source.goBlob.Digest
+		fact.Atom.StartByte, fact.Atom.EndByte = start, end
+		fact.StartLine, fact.EndLine = line, line
+		return emit(fact)
+	}
+}
+
+// embeddedFacts declares a thriftrw module's embedded IDL when its SHA-1 is
+// valid and no committed .thrift file sits at its FilePath. A non-module file
+// is skipped; an unreadable descriptor or a SHA-1 mismatch is one file gap.
+func embeddedFacts(ctx context.Context, corpus sdk.Corpus, relPath string, committed []string, emit sdk.Emit) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	blob, err := corpus.Read(ctx, relPath)
+	if err != nil {
+		return 0, fmt.Errorf("read: %w", err)
+	}
+	if !thriftrwmodule.IsModuleSource(blob.Content) {
+		return 0, nil
+	}
+	module, ok, parseErr := thriftrwmodule.ParseEmbedded(relPath, blob.Content)
+	gap := func(reason string) (int, error) {
+		state := &fileState{
+			relPath: relPath, blob: blob, role: roleFor(relPath),
+			lines: lineStarts(blob.Content), emit: emit,
+		}
+		if err := emitFileGap(state, reason, 1, 1); err != nil {
+			return 0, err
+		}
+		return 1, nil
+	}
+	switch {
+	case parseErr != nil:
+		return gap("embedded_idl_unreadable")
+	case !ok:
+		return 0, nil
+	case !module.DigestValid():
+		return gap("embedded_idl_digest_mismatch")
+	}
+	for _, thriftPath := range committed {
+		if thriftPath == module.FilePath || strings.HasSuffix(thriftPath, "/"+module.FilePath) {
+			return 0, nil // the committed IDL governs
+		}
+	}
+	source := &embeddedSource{
+		filePath: module.FilePath, goBlob: blob,
+		offsets: module.Offsets, goLines: lineStarts(blob.Content),
+	}
+	idlBlob := sdk.Blob{Content: module.Raw, Digest: blob.Digest}
+	return fileFacts(ctx, corpus, relPath, idlBlob, source, emit)
 }
