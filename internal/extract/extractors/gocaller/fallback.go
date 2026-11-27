@@ -35,6 +35,9 @@ type generatedSyntaxIndex struct {
 	methodFallback map[string][]generatedMethod
 	packageNames   map[string]string
 	constructors   map[string][]string
+	// packageStructs (PHEBS-48) holds catalog-projected struct fields keyed
+	// by directory and package clause; nil outside the direct resolver.
+	packageStructs map[string]map[string]sourceStruct
 }
 
 type sourceType struct {
@@ -490,7 +493,10 @@ func (e extractor) scanSyntaxFile(
 		})
 	}
 	tokenFile := fset.File(file.Pos())
-	model := buildSourceFileModel(file, index)
+	model := buildSourceFileModel(
+		file, index,
+		index.packageStructs[packageStructKey(path.Dir(filePath), file.Name.Name)],
+	)
 	starts := lineStarts(blob.Content)
 	var unresolved []string
 	for _, declaration := range file.Decls {
@@ -558,15 +564,30 @@ func (e extractor) scanSyntaxFile(
 	})
 }
 
+// buildSourceFileModel models one file. projected (PHEBS-48) supplies
+// structs declared in sibling files of the same directory and package; a type
+// name the file declares itself, in any form, always governs.
 func buildSourceFileModel(
 	file *ast.File,
 	index generatedSyntaxIndex,
+	projected map[string]sourceStruct,
 ) sourceFileModel {
 	model := sourceFileModel{
 		aliases: make(map[string]string), imported: make(map[string]struct{}),
 		typeAliases:    make(map[string][]sourceType),
 		structs:        make(map[string]sourceStruct),
 		globalBindings: make(map[string][]sourceType),
+	}
+	if len(projected) > 0 {
+		local := make(map[string]struct{})
+		for _, name := range declaredTypeNames(file) {
+			local[name] = struct{}{}
+		}
+		for name, structure := range projected {
+			if _, declared := local[name]; !declared {
+				model.structs[name] = structure
+			}
+		}
 	}
 	for _, spec := range file.Imports {
 		importPath, err := strconv.Unquote(spec.Path.Value)

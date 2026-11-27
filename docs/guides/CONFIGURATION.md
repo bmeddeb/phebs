@@ -1705,6 +1705,20 @@ citation reads the Go string literal's own bytes. The Thrift Caller Map
 (claim 1.2.0) binds thriftrw/YARPC callers to these declarations through the
 same hash-verified provenance as committed files.
 
+### Thrift callers through struct fields declared in another file (PHEBS-48)
+
+Thrift Caller Map claim 1.3.0 (with the comparison and operation Impact claims
+at 1.3.0) also resolves a call made through a struct field whose declared type
+is a generated Thrift client type, when the struct is declared in another file
+of the same directory and package clause. A typical case is a wrapper struct
+declared in `constructor.go` and called from a sibling generated file. The
+resolver catalog (pack 1.6.0) records these fields once per catalog build. A
+struct name declared in the scanned file itself always governs. A name
+declared twice in the package (build-tag variants) contributes nothing, and so
+does a directory with an over-limit or unparseable client source. If the
+projection's bounds are hit, nothing is recorded for that catalog. gRPC
+callers are unchanged. No configuration is involved.
+
 ### Thrift Caller Map release selection (PHEBS-42)
 
 The Thrift Caller Map recipe `phebs.thrift.caller.go`, claim version 1.0.0, is

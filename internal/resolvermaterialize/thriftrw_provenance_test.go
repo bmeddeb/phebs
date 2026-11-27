@@ -115,9 +115,10 @@ const rawIDL = "service Echo {}"
 type yarpcFixture struct {
 	modulePackage string
 	moduleSHA1    string
-	extraIDLPath  string // a second declared .thrift with the same name and content
-	snapshot      bool   // an explicit generated-from mapping names the client
-	embedded      bool   // PHEBS-47: no committed .thrift; the module file declares
+	extraIDLPath  string            // a second declared .thrift with the same name and content
+	snapshot      bool              // an explicit generated-from mapping names the client
+	embedded      bool              // PHEBS-47: no committed .thrift; the module file declares
+	extra         map[string]string // PHEBS-48: additional consumer sources
 }
 
 func buildYARPCCatalog(t *testing.T, fixture yarpcFixture) *CallerResolverView {
@@ -135,6 +136,14 @@ func buildYARPCCatalog(t *testing.T, fixture yarpcFixture) *CallerResolverView {
 		blobs.add(yarpcCallerPath, yarpcCallerSource),
 		blobs.add(yarpcModulePath, yarpcModuleSource(fixture.modulePackage, fixture.moduleSHA1)),
 		blobs.add(yarpcClientPath, yarpcClientInput),
+	}
+	extraPaths := make([]string, 0, len(fixture.extra))
+	for extraPath := range fixture.extra {
+		extraPaths = append(extraPaths, extraPath)
+	}
+	slices.Sort(extraPaths)
+	for _, extraPath := range extraPaths {
+		files = append(files, blobs.add(extraPath, fixture.extra[extraPath]))
 	}
 	declarationPath := yarpcIDLPath
 	if fixture.embedded {
@@ -220,7 +229,7 @@ func scanYARPCCaller(t *testing.T, view *CallerResolverView) (calls, unresolved 
 // wire spelling (Go PingTwice is ping_twice), and callers holding
 // echoclient.New(...) or an echoclient.Interface value resolve.
 func TestThriftRWProvenanceResolvesYARPCCallers(t *testing.T) {
-	if PackVersion != "1.5.0" || ThriftRWProvenance != "thriftrw-yarpc-module-package-sha1-embedded-v2" ||
+	if PackVersion != "1.6.0" || ThriftRWProvenance != "thriftrw-yarpc-module-package-sha1-embedded-v2" ||
 		FrozenMaterializationPolicy().ThriftRWProvenance != ThriftRWProvenance ||
 		FrozenMaterializationPolicy().MaxThriftRWClients != MaxThriftRWClients {
 		t.Fatalf("thriftrw provenance identity = %q / %q", ThriftRWProvenance, PackVersion)

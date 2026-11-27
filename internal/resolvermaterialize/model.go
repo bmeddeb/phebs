@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PackVersion = "1.5.0"
+	PackVersion = "1.6.0"
 
 	GoModulePackName            = "go-module"
 	GRPCGeneratedPackName       = "grpc-generated-attribution"
@@ -32,8 +32,13 @@ const (
 	// lineage declares for the same service and method. The generated Go
 	// package is not the Thrift scope (the compiler lowercases the IDL name
 	// when no `namespace go` is set), so the declaration's spelling wins.
-	ThriftOperationBinding     = "mapped-declaration-service-method-v1"
-	DeclarationRecordSchema    = "phebs-resolver-declaration-target-v1"
+	ThriftOperationBinding  = "mapped-declaration-service-method-v1"
+	DeclarationRecordSchema = "phebs-resolver-declaration-target-v1"
+	// PackageStructRecordSchema and PackageStructRule (PHEBS-48) name the
+	// Thrift member's projection of client-typed struct fields declared in
+	// sibling files of one directory and package clause.
+	PackageStructRecordSchema  = "phebs-resolver-package-struct-v1"
+	PackageStructRule          = "package-struct-fields-v1"
 	ProtocolMemberRecordSchema = "phebs-resolver-protocol-member-v2"
 	MemberMetadataSchema       = "phebs-resolver-member-metadata-v2"
 	MaterializationPolicyName  = "phebs-resolver-materialization-policy-v2"
@@ -69,6 +74,10 @@ const (
 	MaxGeneratedSymbolSources                   = 25_000
 	MaxGeneratedSymbolSourceBytes         int64 = gocaller.MaxDirectGeneratedSourceBytes
 	MaterializationTimeout                      = 5 * time.Minute
+	// PHEBS-48 projection bounds, separate from the catalog input budget.
+	MaxPackageStructSources           = 50_000
+	MaxPackageStructSourceBytes int64 = 256 << 20
+	MaxPackageStructFields            = 25_000
 )
 
 type Protocol string
@@ -242,6 +251,12 @@ type MaterializationPolicy struct {
 	ThriftOperationBinding                string `json:"thrift_operation_binding"`
 	ThriftRWProvenance                    string `json:"thriftrw_provenance"`
 	MaxThriftRWClients                    int    `json:"max_thriftrw_clients"`
+	PackageStructRule                     string `json:"package_struct_rule"`
+	PackageStructRecordSchema             string `json:"package_struct_record_schema"`
+	MaxPackageStructSources               int    `json:"max_package_struct_sources"`
+	MaxPackageStructSourceBytes           int64  `json:"max_package_struct_source_bytes"`
+	MaxPackageStructFileBytes             int    `json:"max_package_struct_file_bytes"`
+	MaxPackageStructFields                int    `json:"max_package_struct_fields"`
 	MaxGoModuleBytes                      int    `json:"max_go_module_bytes"`
 	MaxSnapshotBlobBytes                  int64  `json:"max_snapshot_blob_bytes"`
 	MaxInputBlobReads                     int    `json:"max_input_blob_reads"`
@@ -286,6 +301,12 @@ func FrozenMaterializationPolicy() MaterializationPolicy {
 		ThriftOperationBinding:                ThriftOperationBinding,
 		ThriftRWProvenance:                    ThriftRWProvenance,
 		MaxThriftRWClients:                    MaxThriftRWClients,
+		PackageStructRule:                     PackageStructRule,
+		PackageStructRecordSchema:             PackageStructRecordSchema,
+		MaxPackageStructSources:               MaxPackageStructSources,
+		MaxPackageStructSourceBytes:           MaxPackageStructSourceBytes,
+		MaxPackageStructFileBytes:             gocaller.MaxPackageStructSourceBytes,
+		MaxPackageStructFields:                MaxPackageStructFields,
 		MaxGoModuleBytes:                      resolverinput.MaxGoModuleBytes,
 		MaxSnapshotBlobBytes:                  extract.MaxBlobBytes,
 		MaxInputBlobReads:                     MaxInputBlobReads,
@@ -390,4 +411,25 @@ type generatedSymbolRecord struct {
 	GeneratorRelativePath string   `json:"generator_relative_path,omitempty"`
 	DeclarationPath       string   `json:"declaration_path,omitempty"`
 	DeclarationLineage    string   `json:"declaration_lineage,omitempty"`
+}
+
+// packageStructRecord (PHEBS-48) is either the one package_struct_scan status
+// row of the Thrift member or one package_struct_field projection row.
+type packageStructRecord struct {
+	Schema         string   `json:"schema"`
+	RecordSchema   string   `json:"record_schema"`
+	Pack           string   `json:"pack"`
+	PackVersion    string   `json:"pack_version"`
+	Kind           string   `json:"kind"`
+	State          string   `json:"state"`
+	Reason         string   `json:"reason,omitempty"`
+	Protocol       Protocol `json:"protocol"`
+	Directory      string   `json:"directory,omitempty"`
+	Package        string   `json:"package,omitempty"`
+	Struct         string   `json:"struct,omitempty"`
+	Field          string   `json:"field,omitempty"`
+	ImportPath     string   `json:"import_path,omitempty"`
+	ClientType     string   `json:"client_type,omitempty"`
+	SourcePath     string   `json:"source_path,omitempty"`
+	SourceObjectID string   `json:"source_object_id,omitempty"`
 }

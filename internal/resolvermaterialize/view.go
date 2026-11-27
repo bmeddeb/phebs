@@ -26,6 +26,9 @@ type CallerResolverView struct {
 	manifestDigest   string
 	descriptors      []gocaller.DirectDescriptor
 	resolver         *gocaller.DirectResolver
+	// PHEBS-48: the Thrift member's package struct projection.
+	packageStructs    []gocaller.PackageStructField
+	packageStructScan int
 }
 
 func (view *CallerResolverView) Protocol() Protocol {
@@ -169,6 +172,31 @@ func OpenCallerResolvers(
 			if envelope.Pack != current.pack.Name || envelope.PackVersion != PackVersion {
 				return errors.New("caller resolver record has a stale pack identity")
 			}
+			if envelope.Kind == "package_struct_scan" || envelope.Kind == "package_struct_field" {
+				if current.protocol != ProtocolThrift {
+					return errors.New("caller resolver package struct record is outside the Thrift member")
+				}
+				var record packageStructRecord
+				if err := decodeExactRecord(raw, &record); err != nil {
+					return err
+				}
+				if err := validatePackageStructRecord(record, current.pack); err != nil {
+					return err
+				}
+				if record.Kind == "package_struct_scan" {
+					current.view.packageStructScan++
+					return nil
+				}
+				if len(current.view.packageStructs) >= MaxPackageStructFields {
+					return resolvercatalog.ErrLimit
+				}
+				current.view.packageStructs = append(current.view.packageStructs, gocaller.PackageStructField{
+					Directory: record.Directory, Package: record.Package, Struct: record.Struct,
+					Field: record.Field, ImportPath: record.ImportPath, ClientType: record.ClientType,
+					SourcePath: record.SourcePath, SourceObjectID: record.SourceObjectID,
+				})
+				return nil
+			}
 			if envelope.Kind != "generated_symbol" &&
 				envelope.Kind != "generated_symbol_input" {
 				return nil
@@ -267,6 +295,13 @@ func OpenCallerResolvers(
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("compile caller resolver %q: %w", protocol, err)
+		}
+		if protocol == ProtocolThrift && view.packageStructScan != 1 {
+			return nil, nil, errors.New("caller resolver Thrift member lacks exactly one package struct scan")
+		}
+		view.resolver, err = view.resolver.WithPackageStructs(ctx, view.packageStructs)
+		if err != nil {
+			return nil, nil, fmt.Errorf("compile caller resolver %q package structs: %w", protocol, err)
 		}
 		view.resolver = view.resolver.WithConsumerUnits(unitLookup)
 	}

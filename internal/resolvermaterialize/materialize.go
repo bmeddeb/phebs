@@ -118,6 +118,9 @@ type materializationBudget struct {
 	generatedSymbolIdentityBytes int
 	generatedSourceObjects       map[string]string
 	generatedSymbolRecords       map[string]string
+	// clientTypes (PHEBS-48) is each protocol's admitted generated client
+	// population, collected as generated_symbol rows are written.
+	clientTypes map[Protocol]*gocaller.ClientTypes
 }
 
 func (budget *blobBudget) load(
@@ -853,7 +856,11 @@ func emitGeneratedAttribution(
 	}
 	// PHEBS-46: hash-verified thriftrw provenance needs no snapshot; an
 	// explicit mapping for the same file still governs it.
-	return emitThriftRWProvenance(ctx, current, plan, targets, budget, write)
+	if err := emitThriftRWProvenance(ctx, current, plan, targets, budget, write); err != nil {
+		return err
+	}
+	// PHEBS-48: after every generated symbol of this member is known.
+	return emitPackageStructs(ctx, current, plan, budget, write)
 }
 
 type mappingKey struct {
@@ -1233,6 +1240,17 @@ func writeGeneratedSymbol(
 	}
 	if record.Kind != "generated_symbol" {
 		return writeJSON(write, record)
+	}
+	if budget.clientTypes == nil {
+		budget.clientTypes = make(map[Protocol]*gocaller.ClientTypes)
+	}
+	clients := budget.clientTypes[record.Protocol]
+	if clients == nil {
+		clients = gocaller.NewClientTypes()
+		budget.clientTypes[record.Protocol] = clients
+	}
+	if err := clients.Add(record.ImportPath, record.Package, record.ClientType); err != nil {
+		return err
 	}
 	raw, err := json.Marshal(record)
 	if err != nil {

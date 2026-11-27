@@ -14,7 +14,7 @@ import (
 // TestThriftOperationImpactIdentityFrozen pins the PHEBS-45 tuple: the pack
 // identity, its claim version and the implementation identity a release binds.
 func TestThriftOperationImpactIdentityFrozen(t *testing.T) {
-	if thriftOperationImpactPackID != "phebs.thrift.impact.operation" || thriftOperationImpactClaimVersion != "1.2.0" {
+	if thriftOperationImpactPackID != "phebs.thrift.impact.operation" || thriftOperationImpactClaimVersion != "1.3.0" {
 		t.Fatalf("Thrift operation Impact identity = %s %s", thriftOperationImpactPackID, thriftOperationImpactClaimVersion)
 	}
 	want := "build_operation_impact_report@" + api.OperationImpactSchemaVersion + "+thrift"

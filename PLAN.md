@@ -19949,8 +19949,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     into abstentions.
   - **Exactness.** The key is the directory plus the package clause, so
     `x_test` stays apart from `x`. A struct name declared by more than one
-    parsed file in a key (build-tag variants) is dropped. A directory with
-    an over-limit or unparseable `.go` file contributes nothing. When the
+    parsed file in a key (build-tag variants) is dropped. A directory
+    contributes nothing when one of its `.go` files is over the per-file
+    bound, has an unreadable package header, or imports an admitted client
+    package and then fails to parse. A file that imports none is only
+    header-parsed: it cannot declare a client-typed field. When the
     scanner reads a file, a struct the file declares itself still governs;
     only otherwise does it use the projected struct of its own directory and
     package. Everything after that is the existing rule: one binding,
