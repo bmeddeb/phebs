@@ -1,0 +1,145 @@
+{
+ "schema": "phebs-final-release-validation-v1",
+ "pack_id": "phebs.thrift.caller.go",
+ "pack_claim_version": "1.2.0",
+ "source_commit": "3cd83b47b78ee0bad6f7911377fc1a616880c3aa",
+ "binary_digest": "sha256:8dafa19be62c5ece0a0482911e6d46d7514e474f852577a85f0ce8d508bbd984",
+ "binary_digest_scope": "CGO_ENABLED=0 go build -trimpath ./cmd/phebs at source_commit with go1.26.5 linux/amd64 on the test host; the released runtime is bound separately by its signed record.",
+ "qualification_artifact_id": null,
+ "qualification": "bounded-integration-tests (Ben's 2026-11-08 acceptance rule); no blind-label round",
+ "historical_measurement_scope": "No new truth population. The embedded IDL is declared by the same thriftdecl parser over bytes SHA-1-identical to the original .thrift.",
+ "current_checks": [
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/thriftrwmodule",
+    "-count=1",
+    "-timeout=120s"
+   ],
+   "pid": 2224035,
+   "actual_wait": 0,
+   "seconds": 0.1413710117340088,
+   "tests_passed": 7,
+   "tests_skipped": 0,
+   "log_sha256": "d33c671b7e9bcc0858987b8a0b3d26c570e7d883d35b76c8f10c07beef7f3568"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/extract/extractors/thriftdecl",
+    "-count=1",
+    "-timeout=180s"
+   ],
+   "pid": 2224089,
+   "actual_wait": 0,
+   "seconds": 0.782642126083374,
+   "tests_passed": 37,
+   "tests_skipped": 0,
+   "log_sha256": "54db2265c459797ef1b072cfbe3661fded181baf5bbebcd617316bb4a49233ee"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/extract",
+    "-count=1",
+    "-timeout=600s",
+    "-run",
+    "^Test(CandidatePolic.*|.*Partition.*|PureReaderImports|ThriftRWModuleImports)$"
+   ],
+   "pid": 2224162,
+   "actual_wait": 0,
+   "seconds": 3.9244911670684814,
+   "tests_passed": 55,
+   "tests_skipped": 0,
+   "log_sha256": "194c6aed004de1d8e914f8b72cbbd61d3a6f6e9be38c68a598a5e1471780e6ae"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/resolvermaterialize",
+    "-count=1",
+    "-timeout=300s"
+   ],
+   "pid": 2224536,
+   "actual_wait": 0,
+   "seconds": 5.399552345275879,
+   "tests_passed": 185,
+   "tests_skipped": 0,
+   "log_sha256": "72e634a77377e86722f7b00f75c0d33d851b5deff3aee27c254f0878d73fe7ab"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./cmd/phebs",
+    "-count=1",
+    "-timeout=300s",
+    "-run",
+    "^Test(Thrift.*|CallerMapPackIdentityAndRecipeFrozen|CallerMapReleased.*|CallerComparisonReleasedAdmission|OperationImpact.*|ChangeImpactReleasedAdmission|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix|MergeExtractorsReleasedGovernsDomain|ReleaseLoadBindingsForDerivesEveryField|SignReleaseDerivesBindingsAndSelfVerifies|EvidenceExtractors.*)$"
+   ],
+   "pid": 2224898,
+   "actual_wait": 0,
+   "seconds": 3.879087448120117,
+   "tests_passed": 122,
+   "tests_skipped": 0,
+   "log_sha256": "3966d6f94b7ba89e0962a9e53fe6bf82f9e25e9a2922b6e43cefed73b8fafdaf"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/api",
+    "-count=1",
+    "-timeout=300s",
+    "-run",
+    "^Test(.*Thrift.*|.*Catalog.*|Exact(Thrift)?CallerMap.*|.*CallerComparison.*|.*OperationImpact.*)$"
+   ],
+   "pid": 2224979,
+   "actual_wait": 0,
+   "seconds": 7.840139389038086,
+   "tests_passed": 195,
+   "tests_skipped": 0,
+   "log_sha256": "12cfbf4748bf0fec206f35006f8e66466e4207f73924dd28a574d0ad13dcd190"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/packrelease",
+    "-count=1",
+    "-timeout=90s"
+   ],
+   "pid": 2225736,
+   "actual_wait": 0,
+   "seconds": 0.5884990692138672,
+   "tests_passed": 106,
+   "tests_skipped": 0,
+   "log_sha256": "9b3fdf6be37d0201c89df80794c7d332ab59395edb53014d4e00b1b7329224a0"
+  }
+ ],
+ "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
+ "review": {
+  "source": "PHEBS-47 moves phebs.thrift.caller.go to claim 1.2.0: its recipe reads thrift-contract@1.2.0, and the resolver catalog (pack 1.5.0, thriftrw-yarpc-module-package-sha1-embedded-v2) binds a YARPC client to its module file's embedded declaration when no committed .thrift matches. thrift-contract 1.2.0 declares a thriftrw module's embedded IDL (ThriftModule.Raw) only when sha1(Raw) equals ThriftModule.SHA1 and no committed .thrift sits at its FilePath; subject and lineage are the Go file, the scope follows the usual rule applied to FilePath, and spans are remapped through a decoded-byte offset map onto the Go literal's own bytes. ",
+  "evidence": "Literal decoding and offsets (escapes, octal/hex, unicode, raw strings); descriptor parsing and the SHA-1 check; embedded declarations citing the Go bytes with a lineage distinct from a committed file's; committed-file precedence (root and nested); the digest-mismatch gap; candidate predicates agreeing; a YARPC caller resolved end to end to an embedded declaration, with a mutation removing the fallback failing. Run once over real cadence (12 modules: 5 services, 148 operations, 750 messages, 2,995 fields, no gaps; citations read the IDL bytes in the Go literal) and yarpc-go (unchanged at 108 operations: committed IDL governs).",
+  "security": "Existing Caller Map, comparison, report and citation fences retained; relations are hash-verified, never inferred from directory names.",
+  "steady_state_cost": "Catalog build only: the PHEBS-46 provenance pass plus one map lookup per client; each catalog is re-materialized once at pack 1.5.0. Nothing per query or sync tick."
+ },
+ "not_established": [
+  "Precision or recall beyond the T49.2 rounds, which measured committed .thrift files; embedded IDL is SHA-1-identical to the original file",
+  "Include resolution across modules (include-qualified references stay unresolved)",
+  "Apache Thrift output, Kitex or fbthrift; a Raw that is not one same-file string literal",
+  "Completeness, runtime use, safe retirement, scale or latency/throughput SLO"
+ ],
+ "expires_at": "2027-01-12T23:59:59Z"
+}
