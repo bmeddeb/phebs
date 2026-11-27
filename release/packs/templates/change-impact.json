@@ -1,7 +1,7 @@
 {
   "release_schema_version": "1.0",
-  "release_id": "rel-phebs.protobuf.change-impact-1.0.6",
-  "release_version": "1.0.6",
+  "release_id": "rel-phebs.protobuf.change-impact-1.0.7",
+  "release_version": "1.0.7",
   "pack_id": "phebs.protobuf.change-impact",
   "pack_claim_version": "1.0.0",
   "card": {
