@@ -107,6 +107,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-26, `8e0ac6b2`) resolves Thrift callers of thriftrw/YARPC clients
     through hash-verified thriftrw provenance (PHEBS-46), verified on `dave`
     against yarpc-go.
+    [`v0.3.14`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.14)
+    (2026-11-27, `9394ccc9`) declares Thrift contracts from thriftrw's
+    embedded IDL when the `.thrift` is not committed (PHEBS-47), verified on
+    `dave` against cadence.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -19881,3 +19885,37 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   - **Steady-state cost.** At extraction only: one header read per
     `<dir>/<dir>.go` file, one Go parse and one IDL parse per thriftrw module
     (each bounded by the 4 MiB blob bound). Nothing per query or sync tick.
+  - **Gate findings.** The first gate run failed `ci-go` on two retained
+    baselines that pin this change's identities on purpose: `spike/t201`
+    pinned `thrift-contract` `1.1.2`, and the retained T30.4 planner
+    measurement (`spike/t304/results.json`) pinned
+    `thrift-contract-paths-v1`. The pin moved to `1.2.0` and the measurement
+    was regenerated through `T304_RESULTS_PATH` on linux/amd64; its only
+    identity changes are the enumeration policy and the digests derived from
+    it. The gates then passed on `9394ccc9`.
+  - **Verified (2026-11-27).** `v0.3.14` was published from `9394ccc9`
+    (runtime sha256 `3ae37027…`) and installed on `dave` with no
+    configuration change.
+    - Before, on `v0.3.13`, the Thrift Contract Atlas for both cadence
+      repositories (the `github.com/uber/cadence` mirror and the
+      `cadence-scip` fixture at `13e15653`, which commits no `.thrift` file)
+      paged to completion with no items.
+    - After, each lists 5 services and 148 operations, all `exact`,
+      attributed to `.gen/go/{admin,cadence,health,history,matching}/*.go`.
+      The `/cadence.WorkflowService/StartWorkflowExecution` citation
+      (`cadence.go` line 32) reads the IDL method line exactly, from inside
+      the Go string literal.
+    - The Thrift Caller Map answers `current` with no rows for all 148
+      operations. Contrary to this ADR's expectation, no cadence call site has
+      the shape the caller extractor tracks: every `*serviceclient.New(...)`
+      result is passed straight into a wrapper or a `Service` field, and calls
+      are made on struct fields (`g.c.StartWorkflowExecution`) in
+      gowrap-generated `client/wrappers/thrift/*_generated.go`. No caller is
+      invented; this is the PHEBS-46 boundary (the crossdock gauntlet), and
+      the fallback stays covered by its integration test.
+    - yarpc-go and gohive Caller Map rows are identical before and after, 11
+      of 12 observation generations are unchanged (`github.com/bmeddeb/phebs`
+      moved only because the instance synced the pushed main head), and the
+      log since restart has no panic or error line.
+    - Receipts are in `~/phebs-instance/receipts/phebs47-2026-11-27/` on
+      `dave`.

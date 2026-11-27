@@ -21363,13 +21363,19 @@ callers unchanged. cadence stays unresolved: its IDL is not committed (option
 C would cover it). See the 2026-11-26 PHEBS-46 ADR in `PLAN.md`. Receipts are
 in `~/phebs-instance/receipts/phebs46-2026-11-26/` on `dave`.
 
-*PHEBS-47 (2026-11-27, in progress; Ben chose option C):* Thrift declarations
-from thriftrw's embedded IDL when the `.thrift` is not committed. A thriftrw
-module file (`<dir>/<dir>.go`) whose `sha1(Raw)` equals `ThriftModule.SHA1`
-declares its embedded IDL, cited in the Go literal's own bytes, unless a
-committed `.thrift` sits at its `FilePath`. `thrift-contract` 1.2.0; Thrift
-Atlas claim 1.1.0; Thrift caller claims 1.2.0; resolver pack 1.5.0. Target:
-cadence. See the 2026-11-27 PHEBS-47 ADR in `PLAN.md`.
+*PHEBS-47 closed (2026-11-27; Ben chose option C):* [`v0.3.14`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.14)
+was published from `9394ccc9` and installed on `dave`. Thrift declarations
+come from thriftrw's embedded IDL when the `.thrift` is not committed: a
+thriftrw module file (`<dir>/<dir>.go`) whose `sha1(Raw)` equals
+`ThriftModule.SHA1` declares its embedded IDL, cited in the Go literal's own
+bytes, unless a committed `.thrift` sits at its `FilePath`. `thrift-contract`
+1.2.0; Thrift Atlas claim 1.1.0; Thrift caller claims 1.2.0; resolver pack
+1.5.0. On `dave`, cadence's Thrift Contract Atlas went from empty to 5
+services and 148 exact operations. Its Thrift Caller Map stays empty: cadence
+calls its YARPC clients only through struct fields in generated wrappers, a
+shape the caller extractor does not track. yarpc-go and gohive callers are
+unchanged. See the 2026-11-27 PHEBS-47 ADR in `PLAN.md`. Receipts are in
+`~/phebs-instance/receipts/phebs47-2026-11-27/` on `dave`.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 
