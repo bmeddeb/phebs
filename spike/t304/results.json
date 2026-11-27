@@ -3,8 +3,8 @@
   "decision": "GO",
   "reason": "The production streamed planner stayed within the prospective local gates on the deterministic 200,008-file corpus, and a second build reproduced every staged byte.",
   "go_version": "go1.26.5",
-  "goos": "darwin",
-  "goarch": "arm64",
+  "goos": "linux",
+  "goarch": "amd64",
   "corpus": {
     "schema": "t301-focused-index-spike-v1",
     "repository": "example.com/neutral/monorepo",
@@ -116,7 +116,7 @@
     {
       "domain": "thrift-contract",
       "version": "1.0.0",
-      "enumeration_policy": "thrift-contract-paths-v1",
+      "enumeration_policy": "thrift-contract-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local"
     }
@@ -141,9 +141,9 @@
   "run1": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:73ad1537c150a93f6efaa96ada48c1ce477e5c68f0a1a6e86849455bcfd6a7ba",
-    "generation_digest": "sha256:65d50dac9bede00d8304e8c5e7a288a460062b4c42e59c7c519b0d36a54e0826",
-    "manifest_digest": "sha256:75fd91c2a3686d0193a035b49078f1c58674f9e23e8e4aabe8cc3dafeae880a1",
+    "policy_digest": "sha256:1865893164ced290efee96ca08aa6db2b845a80975f84b2f2045ae877fc1f75d",
+    "generation_digest": "sha256:a960b7f1c21693fd86a45cf3b691d6edf416dda2aace46337c31aa5721c80ac4",
+    "manifest_digest": "sha256:2c66de61c1bf7cbdd01d7aaf2801f60be5ee5381590d943eed9ca2c8aacb8368",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -185,16 +185,16 @@
     "planner_scratch_upper_bound_bytes": 4386,
     "validation_scratch_upper_bound_bytes": 3514,
     "peak_candidate_disk_bytes": 29353,
-    "canonical_output_digest": "sha256:30ef974fc4f162100b5903526f53967511b7618ac11a3505a757c50d25db3bfd",
-    "planner_wall_nanos": 3608773292,
-    "peak_rss_bytes": 61554688
+    "canonical_output_digest": "sha256:9e38eb2706ed5f201078d7dbc9d14591ddde896b994966dec1b85a9e944ac1ef",
+    "planner_wall_nanos": 1552144908,
+    "peak_rss_bytes": 194744320
   },
   "run2": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:73ad1537c150a93f6efaa96ada48c1ce477e5c68f0a1a6e86849455bcfd6a7ba",
-    "generation_digest": "sha256:65d50dac9bede00d8304e8c5e7a288a460062b4c42e59c7c519b0d36a54e0826",
-    "manifest_digest": "sha256:75fd91c2a3686d0193a035b49078f1c58674f9e23e8e4aabe8cc3dafeae880a1",
+    "policy_digest": "sha256:1865893164ced290efee96ca08aa6db2b845a80975f84b2f2045ae877fc1f75d",
+    "generation_digest": "sha256:a960b7f1c21693fd86a45cf3b691d6edf416dda2aace46337c31aa5721c80ac4",
+    "manifest_digest": "sha256:2c66de61c1bf7cbdd01d7aaf2801f60be5ee5381590d943eed9ca2c8aacb8368",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -236,9 +236,9 @@
     "planner_scratch_upper_bound_bytes": 4386,
     "validation_scratch_upper_bound_bytes": 3514,
     "peak_candidate_disk_bytes": 29353,
-    "canonical_output_digest": "sha256:30ef974fc4f162100b5903526f53967511b7618ac11a3505a757c50d25db3bfd",
-    "planner_wall_nanos": 3550392250,
-    "peak_rss_bytes": 61456384
+    "canonical_output_digest": "sha256:9e38eb2706ed5f201078d7dbc9d14591ddde896b994966dec1b85a9e944ac1ef",
+    "planner_wall_nanos": 1555155766,
+    "peak_rss_bytes": 194744320
   },
   "canonical_bytes_equal": true
 }
