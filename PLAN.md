@@ -19919,3 +19919,75 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       log since restart has no panic or error line.
     - Receipts are in `~/phebs-instance/receipts/phebs47-2026-11-27/` on
       `dave`.
+
+- **2026-11-27 — PHEBS-48: Thrift Caller Map follows client-typed struct fields declared in another file of the same package (Ben chose option D).**
+  Goal: give cadence's Thrift operations their callers. PHEBS-47's Verified
+  bullet blamed struct fields; the real boundary is narrower. The
+  direct-syntax scanner already follows a typed struct field at the exact
+  tier when the struct is declared in the scanned file. cadence declares
+  `frontendClient struct { c workflowserviceclient.Interface }` in
+  `client/wrappers/thrift/constructor.go` and calls `g.c.Method(...)` from
+  the sibling `*_generated.go` files. The scanner models one file at a time,
+  and caller leaves are hash-prefix partitions, so a package's files are never
+  scanned together. Options were (A) SCIP typed references in the direct path
+  (cadence-scip only, a new evidence source for a scanner built without one),
+  (D) package-scoped struct types recorded in the resolver catalog, and (C)
+  leave as is. Ben first picked A on the earlier diagnosis, then chose D on
+  the corrected one.
+  - **Projection.** While materializing the Thrift member, after the
+    generated symbols, phebs reads every base-lane `.go` file in the
+    `thrift-caller` view that is not a catalog-owned generated input. Files
+    that import no admitted client import path are dropped after an
+    imports-only parse. The rest are fully parsed with the same per-file
+    model the scanner uses, so a field type resolves only through that
+    file's own imports. Each named or embedded field whose type is exactly
+    an admitted `(import path, client type)` becomes one
+    `package_struct_field` row: directory, package clause, struct, field
+    (empty when embedded), import path, client type, and the source path and
+    object ID. Admitted means any Thrift `generated_symbol` row in this
+    catalog, whatever its state, so abstaining descriptors still turn calls
+    into abstentions.
+  - **Exactness.** The key is the directory plus the package clause, so
+    `x_test` stays apart from `x`. A struct name declared by more than one
+    parsed file in a key (build-tag variants) is dropped. A directory with
+    an over-limit or unparseable `.go` file contributes nothing. When the
+    scanner reads a file, a struct the file declares itself still governs;
+    only otherwise does it use the projected struct of its own directory and
+    package. Everything after that is the existing rule: one binding,
+    lineage from the catalog, ambiguity as an explicit abstention. Call sites
+    in generated files are emitted as today, with role `generated`.
+  - **Bounds.** At most 50,000 source reads and 256 MiB for the projection,
+    separate from the catalog's input budget, with a 4 MiB per-file bound (the
+    scanner's own source bound). At most 25,000 rows. When a bound is hit, one
+    `package_struct_scan` row says `unsupported` /
+    `package_struct_budget_exhausted` and no struct rows are written, so the
+    projection never goes partial. Otherwise the status row says `resolved`.
+  - **Scope.** Thrift only. The gRPC caller claims state that resolved facts
+    are unchanged from `grpc-caller@1.6.0`, so widening gRPC needs its own
+    claim versions; that is a follow-up. The gRPC member gets no projection
+    rows. Structs reached through another projected struct (`s.deps.client`
+    across files), package-level variables declared in another file, and
+    cross-file type aliases are not followed.
+  - **Identity.** Resolver pack `1.5.0` → `1.6.0`, with a policy entry
+    `package-struct-fields-v1` and the new bounds, so every catalog is
+    rematerialized and every caller leaf rescanned once. The caller scanner
+    and extractor versions are unchanged. The three Thrift caller claims
+    (Caller Map, comparison, operation Impact) move to `1.3.0` with new cards
+    naming the rule; `1.2.0` artifacts keep their bytes.
+  - **Acceptance.** Integration tests and the three gates (2026-11-08 rule).
+    The projection: a cross-file field resolving; same-file precedence;
+    duplicate-declaration drop; an unparseable sibling dropping its
+    directory; budget exhaustion writing no rows; `x_test` separation. Then
+    a YARPC caller resolved end to end through a struct declared in a sibling
+    file, with a mutation that removes the projection failing. Then `dave` on
+    both cadence repositories, with yarpc-go, gohive and the gRPC
+    repositories' caller rows unchanged.
+  - **Not established.** No precision, recall, completeness or scale claim.
+    Kitex, fbthrift and `extends` methods are still unresolved.
+  - **Steady-state cost.** At catalog build only: one blob read and one
+    imports-only parse per base-lane `.go` file in the `thrift-caller` view,
+    and one full parse per file that imports an admitted client package. This
+    is a new per-catalog read of the repository's Go files; it is measured on
+    `dave`. Nothing per query or sync tick; caller leaves already key on the
+    catalog manifest digest, so projection changes invalidate exactly the
+    leaves they should.
