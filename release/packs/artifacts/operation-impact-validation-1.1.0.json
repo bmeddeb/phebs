@@ -1,0 +1,143 @@
+{
+ "schema": "phebs-final-release-validation-v1",
+ "pack_id": "phebs.contract.impact.operation",
+ "pack_claim_version": "1.1.0",
+ "source_commit": "aea83c1586ae9db34369964ea09e578f5716b52a",
+ "binary_digest": "sha256:37088bccb6e31afe3b0c066f31aa910e133a2beacefad8fdda4f2eff7d1568c7",
+ "binary_digest_scope": "CGO_ENABLED=0 go build -trimpath ./cmd/phebs at source_commit with go1.26.5 linux/amd64 on the test host; the released runtime is bound separately by its signed record.",
+ "qualification_artifact_id": null,
+ "qualification": "bounded-integration-tests (Ben's 2026-11-08 acceptance rule); no blind-label round",
+ "historical_measurement_scope": "No new truth population. Operation Impact pages the same declaration-bound caller rows; claim 1.1.0 adds rows whose generated client is related to its declaration by embedded descriptor equality instead of an authored snapshot.",
+ "current_checks": [
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/extract/extractors/gocaller",
+    "-count=1",
+    "-timeout=180s"
+   ],
+   "pid": 2922156,
+   "actual_wait": 0,
+   "seconds": 0.8635518550872803,
+   "tests_passed": 23,
+   "tests_skipped": 0,
+   "log_sha256": "5f121f522fd17f84d636d1fbbf37f7ace7aa89d16df3b0a1df1dff66b7a52f21"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/extract/extractors/protodecl",
+    "-count=1",
+    "-timeout=180s"
+   ],
+   "pid": 2922228,
+   "actual_wait": 0,
+   "seconds": 0.42374467849731445,
+   "tests_passed": 44,
+   "tests_skipped": 0,
+   "log_sha256": "ecba4194985ac78bdaffac32db03c5556670b8f5f5d78d5e9e66eb6236f7b40b"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/resolvermaterialize",
+    "-count=1",
+    "-timeout=300s"
+   ],
+   "pid": 2922294,
+   "actual_wait": 0,
+   "seconds": 5.066537857055664,
+   "tests_passed": 207,
+   "tests_skipped": 0,
+   "log_sha256": "fbf82b4b53de19d1b449e707a3f0083820c529503e0102f2dd35a303878ff19d"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/callerexecute",
+    "-count=1",
+    "-timeout=600s"
+   ],
+   "pid": 2922648,
+   "actual_wait": 0,
+   "seconds": 1.8321645259857178,
+   "tests_passed": 127,
+   "tests_skipped": 1,
+   "log_sha256": "4892d346b8908c009bb5132ce3ad93571f885f8ef7b294044dc3a1656cd26593"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./cmd/phebs",
+    "-count=1",
+    "-timeout=300s",
+    "-run",
+    "^Test(Thrift.*|CallerMap(PackIdentityAndRecipeFrozen|Released.*|Discovery.*|Ordinary.*|Registration.*)|CallerComparisonReleasedAdmission|OperationImpact.*|ChangeImpactReleasedAdmission|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix|MergeExtractorsReleasedGovernsDomain|ReleaseLoadBindingsForDerivesEveryField|SignReleaseDerivesBindingsAndSelfVerifies|EvidenceExtractors.*)$"
+   ],
+   "pid": 2922773,
+   "actual_wait": 0,
+   "seconds": 16.72437286376953,
+   "tests_passed": 206,
+   "tests_skipped": 0,
+   "log_sha256": "dbfbe082009876e8bb7d3b0c9aebce3c585e34bd150fa5df55fcc8bc315a4107"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/api",
+    "-count=1",
+    "-timeout=300s",
+    "-run",
+    "^Test(.*Thrift.*|.*Catalog.*|Exact(Thrift)?CallerMap.*|.*CallerComparison.*|.*OperationImpact.*)$"
+   ],
+   "pid": 2923189,
+   "actual_wait": 0,
+   "seconds": 11.295632123947144,
+   "tests_passed": 195,
+   "tests_skipped": 0,
+   "log_sha256": "58805b6bdb87473ab98abb91164d62818baf5ae2cf8f778b89856f2a3fb43175"
+  },
+  {
+   "command": [
+    "go",
+    "test",
+    "-json",
+    "./internal/packrelease",
+    "-count=1",
+    "-timeout=90s"
+   ],
+   "pid": 2924044,
+   "actual_wait": 0,
+   "seconds": 0.3590981960296631,
+   "tests_passed": 106,
+   "tests_skipped": 0,
+   "log_sha256": "87d36a55ebe197451c779464b65afd9be46cf5332ff0ee4b40b3e3173eb982ff"
+  }
+ ],
+ "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
+ "review": {
+  "source": "PHEBS-49 moves phebs.contract.impact.operation to claim 1.1.0: the resolver catalog (pack 1.7.0, protoc-gen-go-embedded-descriptor-equal-v1) relates a protoc-gen-go-grpc client file that no generated-from snapshot governs to a committed .proto only when exactly one protoc-gen-go descriptor named by the client's source path sits in its directory and package clause, declares every operation the client calls, and is equivalent to exactly one declared .proto at that path or ending in it (package, syntax, imports, go_package, messages, enums, services), with one declaration lineage. Every other shape is an explicit abstention. The Thrift lane is unchanged.",
+  "evidence": "Callers resolving through the []byte, concatenated-string and legacy gzipped descriptor forms; abstentions for stale generated code, a different go_package, two equivalent committed copies, an uncommitted .proto, a missing and a duplicated descriptor; an explicit mapping governing; equivalence over maps, oneofs, proto3 optional, nested, imported and proto2 group shapes and inequivalence for six single changes; the scoping rule; literal bounds. Run once with the real functions over the mirrored repositories: grpc-go binds 6 services, cadence 2 (YARPC clients, no gRPC callers), phebs 1, microservices-demo 0 (proto_descriptor_mismatch: its genproto predates every committed demo.proto).",
+  "security": "Existing Caller Map, comparison, report and citation fences retained; the rule reads only candidate-view blobs within the existing input budget, decodes descriptors under a 4 MiB bound and preflights declared .proto files before parsing.",
+  "steady_state_cost": "Catalog build only, and only for the gRPC member: one blob read per base-lane *.pb.go (at most 4,096), a syntax parse of client files and of descriptor files in client directories, and one parse per declared .proto named by a client's source path. Every catalog is re-materialized once at pack 1.7.0. Nothing per query or sync tick."
+ },
+ "not_established": [
+  "Generated code whose .proto is not committed (for example grpc-go's vendored grpc-proto services)",
+  "Generated code built from a .proto that has since changed, and several equivalent committed copies",
+  "YARPC, Connect and other non-gRPC protobuf clients; gRPC calls through struct fields declared in another file",
+  "Precision, recall, completeness, runtime use, safe retirement, scale or latency/throughput SLO"
+ ],
+ "expires_at": "2027-01-16T23:59:59Z"
+}
