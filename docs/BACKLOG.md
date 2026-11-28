@@ -21395,6 +21395,26 @@ resolved facts are unchanged. Extending it to gRPC clients needs new gRPC
 caller claim versions and cards, and its own `dave` before/after on
 microservices-demo and grpc-go.
 
+*PHEBS-49 closed (2026-11-28; Ben chose option A):* [`v0.3.16`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.16)
+was published from `e0b90e13` and installed on `dave`. The resolver catalog
+(pack 1.7.0, policy `protoc-gen-go-embedded-descriptor-equal-v1`) binds a
+generated gRPC client file with no snapshot mapping to its committed `.proto`
+when the descriptor protoc-gen-go embeds in the same package declares every
+called operation and is equivalent to exactly one declared `.proto` at the
+file's source path; every other shape is an explicit abstention. gRPC caller
+claims 1.1.0. On `dave`, grpc-go went from no gRPC Caller Map rows to 56
+resolved callers on 12 operations; microservices-demo call sites are now
+explicit `proto_descriptor_mismatch` abstentions; the Thrift repositories and
+t2114 are byte-identical. See the 2026-11-28 PHEBS-49 ADR in `PLAN.md`.
+Receipts are in `~/phebs-instance/receipts/phebs49-2026-11-28/` on `dave`.
+
+*Follow-up (not started): gRPC declarations from the embedded descriptor.*
+grpc-go's 12 services vendored from grpc-proto and microservices-demo's stale
+genproto have no equivalent committed `.proto`, so they stay unbound. A
+PHEBS-47-style declaration taken from the embedded `FileDescriptorProto` would
+cover them; it needs Ben's decision, new Protobuf Contract Atlas and gRPC
+caller claim versions, and its own `dave` before/after.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

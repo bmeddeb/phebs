@@ -115,6 +115,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-28, `ff6e9567`) resolves Thrift callers through client-typed
     struct fields declared in another file of the same package (PHEBS-48),
     verified on `dave` against cadence.
+    [`v0.3.16`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.16)
+    (2026-11-28, `e0b90e13`) binds generated gRPC clients to their committed
+    `.proto` through the embedded protobuf descriptor (PHEBS-49), verified
+    on `dave` against grpc-go.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -20092,3 +20096,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     files in client directories, and one parse per declared `.proto` named
     by a client's source path. Nothing per query or sync tick; caller leaves
     already key on the catalog manifest digest.
+  - **Verified (2026-11-28).** The gates passed on `e0b90e13` (`ci-static`
+    57 s, `ci-go` 4218 s, `ci-race` 990 s) with no failure. `v0.3.16` was
+    published from it (runtime sha256 `1a7b1485…`) and installed on `dave`
+    with no configuration change.
+    - Before, on `v0.3.15`, grpc-go, microservices-demo and
+      `github.com/bmeddeb/phebs` answered the gRPC Caller Map with no rows.
+    - After, grpc-go has 58 rows on 12 of 18 operations, 56 of them
+      `resolved_caller` by `syntax`: echo (4 operations, 38 rows),
+      helloworld `SayHello` (11), route_guide (4 operations, 4), stress
+      metrics `GetAllGauges` (1) and profiling `Enable`/`GetStreamStats` (2).
+      The other 2 are profiling `Enable` calls in
+      `profiling/service/service.go` that abstain as
+      `unsupported_receiver_flow`. The 6 operations without rows are metrics
+      `GetGauge` and the reflection test services; why they have none was
+      not investigated.
+    - microservices-demo has 85 rows on 59 of 66 operations, all
+      `extractor_abstention` with `proto_descriptor_mismatch`, as the
+      expected effect above said: the frontend's calls are now visible and
+      explicitly unbound instead of absent. `github.com/bmeddeb/phebs`
+      shows the same 2 `unsupported_receiver_flow` rows for its spike/t511
+      copy of the profiling service.
+    - cadence, yarpc-go, gohive and t2114 caller rows are byte-identical
+      before and after; 11 of 12 observation generations are unchanged
+      (`github.com/bmeddeb/phebs` moved only because main was pushed); 49
+      resolver catalog and 134 caller leaf jobs succeeded (2 catalog jobs
+      deferred on a dependency first), and the log since restart has no
+      panic line. Transient `relationship authority not ready` lines ended
+      during the catalog rebuild.
+    - Measured steady-state cost: the largest resolver catalog builds took
+      761 ms (cadence), 695 ms (cadence-scip) and 331 ms (grpc-go), against
+      698 ms and 673 ms for the cadence pair on `v0.3.15`.
+    - Receipts are in `~/phebs-instance/receipts/phebs49-2026-11-28/` on
+      `dave`.
