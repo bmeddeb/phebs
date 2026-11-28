@@ -111,6 +111,10 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-27, `9394ccc9`) declares Thrift contracts from thriftrw's
     embedded IDL when the `.thrift` is not committed (PHEBS-47), verified on
     `dave` against cadence.
+    [`v0.3.15`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.15)
+    (2026-11-28, `ff6e9567`) resolves Thrift callers through client-typed
+    struct fields declared in another file of the same package (PHEBS-48),
+    verified on `dave` against cadence.
   - **Installed managed SCIP (T45.7/T45.10, MED-505)** passed its tagged native
     acceptance on `dave` on 2026-11-24 (see the MED-505 rebuild ADR below).
   - **Other open lanes:** the
@@ -19994,3 +19998,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     `dave`. Nothing per query or sync tick; caller leaves already key on the
     catalog manifest digest, so projection changes invalidate exactly the
     leaves they should.
+  - **Verified (2026-11-28).** The gates passed on `ff6e9567` (`ci-static`
+    28 s, `ci-go` 4215 s, `ci-race` 994 s) with no failure. `v0.3.15` was
+    published from it (runtime sha256 `132861f5…`) and installed on `dave`
+    with no configuration change.
+    - Before, on `v0.3.14`, both cadence repositories answered the Thrift
+      Caller Map with no rows for all 148 operations.
+    - After, each has 137 rows on 137 operations, all `resolved_caller` by
+      `syntax`, all in `client/wrappers/thrift/{admin,frontend,history,matching}_generated.go`;
+      the two repositories' rows are identical. The 11 operations without
+      rows (the schedule APIs, the admin cross-cluster tasks and health) have
+      no call through a wrapper of their own service in that directory.
+    - yarpc-go, gohive, t2114, microservices-demo and grpc-go caller rows are
+      byte-identical before and after; 11 of 12 observation generations are
+      unchanged (`github.com/bmeddeb/phebs` moved only because main was
+      pushed); all 37 resolver catalog and 122 caller leaf jobs succeeded and
+      the log since restart has no panic or error line.
+    - Measured steady-state cost: the largest resolver catalog build took
+      698 ms (cadence) and 673 ms (cadence-scip), against a local preview of
+      2,298 files and 44 MB read, 13 fully parsed and 9 rows for cadence-scip.
+    - Receipts are in `~/phebs-instance/receipts/phebs48-2026-11-27/` on
+      `dave`.

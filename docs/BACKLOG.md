@@ -21377,6 +21377,24 @@ shape the caller extractor does not track. yarpc-go and gohive callers are
 unchanged. See the 2026-11-27 PHEBS-47 ADR in `PLAN.md`. Receipts are in
 `~/phebs-instance/receipts/phebs47-2026-11-27/` on `dave`.
 
+*PHEBS-48 closed (2026-11-28; Ben chose option D):* [`v0.3.15`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.15)
+was published from `ff6e9567` and installed on `dave`. The resolver catalog
+(pack 1.6.0, policy `package-struct-fields-v1`) records, per directory and
+package clause, struct fields whose declared type is an admitted generated
+Thrift client type, and the direct scanner consults them for a struct the
+scanned file does not declare. Thrift caller claims 1.3.0. On `dave`, both
+cadence repositories went from no Thrift Caller Map rows to 137 resolved
+callers in the gowrap-generated wrappers; yarpc-go, gohive and the protobuf
+repositories are byte-identical. See the 2026-11-27 PHEBS-48 ADR in
+`PLAN.md`. Receipts are in `~/phebs-instance/receipts/phebs48-2026-11-27/`
+on `dave`.
+
+*Follow-up (not started): gRPC callers through cross-file struct fields.* The
+PHEBS-48 projection is Thrift only, because the gRPC caller claims say their
+resolved facts are unchanged. Extending it to gRPC clients needs new gRPC
+caller claim versions and cards, and its own `dave` before/after on
+microservices-demo and grpc-go.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the
