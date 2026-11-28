@@ -86,6 +86,8 @@ type generatedPlan struct {
 	// thriftrw-plugin-yarpc client candidates found in the caller view.
 	manifest           extract.CandidateManifest
 	thriftRWCandidates []extract.CandidateManifestFile
+	// PHEBS-49: the base-lane *.pb.go files found in the caller view.
+	protoGoCandidates []extract.CandidateManifestFile
 }
 
 type generatedSymbolParse struct {
@@ -609,6 +611,12 @@ func emitModulesAndValidateGeneratedPaths(
 				}
 				plan.thriftRWCandidates = append(plan.thriftRWCandidates, file)
 			}
+			if isProtoGoCandidate(file) {
+				if err := validateInputFile(file); err != nil {
+					return err
+				}
+				plan.protoGoCandidates = append(plan.protoGoCandidates, file)
+			}
 			if file.SourceLane == candidate.SourceLaneBase &&
 				strings.HasSuffix(file.Path, ".go") {
 				if _, wanted := plan.generatedPaths[file.Path]; wanted {
@@ -857,6 +865,11 @@ func emitGeneratedAttribution(
 	// PHEBS-46: hash-verified thriftrw provenance needs no snapshot; an
 	// explicit mapping for the same file still governs it.
 	if err := emitThriftRWProvenance(ctx, current, plan, targets, budget, write); err != nil {
+		return err
+	}
+	// PHEBS-49: protoc-gen-go output binds by embedded descriptor equality;
+	// an explicit mapping or invocation root for the same file still governs.
+	if err := emitProtoDescriptorProvenance(ctx, current, plan, targets, budget, write); err != nil {
 		return err
 	}
 	// PHEBS-48: after every generated symbol of this member is known.

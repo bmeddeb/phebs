@@ -100,6 +100,12 @@ func testClaimVersion(packID string) string {
 		return thriftCallerComparisonClaimVersion
 	case thriftOperationImpactPackID:
 		return thriftOperationImpactClaimVersion
+	case callerMapPackID:
+		return callerMapClaimVersion
+	case callerComparisonPackID:
+		return callerComparisonClaimVersion
+	case operationImpactPackID:
+		return operationImpactClaimVersion
 	}
 	return "1.0.0"
 }

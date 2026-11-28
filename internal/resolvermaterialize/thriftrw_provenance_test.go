@@ -229,7 +229,7 @@ func scanYARPCCaller(t *testing.T, view *CallerResolverView) (calls, unresolved 
 // wire spelling (Go PingTwice is ping_twice), and callers holding
 // echoclient.New(...) or an echoclient.Interface value resolve.
 func TestThriftRWProvenanceResolvesYARPCCallers(t *testing.T) {
-	if PackVersion != "1.6.0" || ThriftRWProvenance != "thriftrw-yarpc-module-package-sha1-embedded-v2" ||
+	if PackVersion != "1.7.0" || ThriftRWProvenance != "thriftrw-yarpc-module-package-sha1-embedded-v2" ||
 		FrozenMaterializationPolicy().ThriftRWProvenance != ThriftRWProvenance ||
 		FrozenMaterializationPolicy().MaxThriftRWClients != MaxThriftRWClients {
 		t.Fatalf("thriftrw provenance identity = %q / %q", ThriftRWProvenance, PackVersion)

@@ -1,15 +1,15 @@
 {
   "release_schema_version": "1.0",
-  "release_id": "rel-phebs.grpc.caller.go-1.0.16",
-  "release_version": "1.0.16",
+  "release_id": "rel-phebs.grpc.caller.go-1.1.0",
+  "release_version": "1.1.0",
   "pack_id": "phebs.grpc.caller.go",
-  "pack_claim_version": "1.0.0",
+  "pack_claim_version": "1.1.0",
   "card": {
-    "artifact_id": "caller-map-card-1.0.0.md",
+    "artifact_id": "caller-map-card-1.1.0.md",
     "digest": ""
   },
   "manifest": {
-    "artifact_id": "caller-map-manifest-1.0.0.json",
+    "artifact_id": "caller-map-manifest-1.1.0.json",
     "digest": ""
   },
   "implementation": {
@@ -20,15 +20,16 @@
   },
   "referenced_artifacts_root_digest": "",
   "validation": {
-    "artifact_id": "caller-map-validation-1.0.0.json",
+    "artifact_id": "caller-map-validation-1.1.0.json",
     "digest": "",
     "applies": true,
     "expires_at": "2027-01-15T23:59:59Z",
     "expiry_trigger": null
   },
   "derived_status": "released",
-  "approved_at": "2026-10-20T00:00:00Z",
+  "approved_at": "2026-11-28T00:00:00Z",
   "approval_records": [
-    "ben-meddeb-2026-10-20-ship-experimental-dark-features"
+    "ben-meddeb-2026-10-20-ship-experimental-dark-features",
+    "ben-meddeb-2026-11-28-phebs49-grpc-descriptor"
   ]
 }

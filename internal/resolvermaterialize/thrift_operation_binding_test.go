@@ -87,7 +87,7 @@ func (c *Cursor) exec() {
 func TestThriftGeneratedSymbolBindsToMappedDeclarationSpelling(t *testing.T) {
 	if ThriftOperationBinding != "mapped-declaration-service-method-v1" ||
 		FrozenMaterializationPolicy().ThriftOperationBinding != ThriftOperationBinding ||
-		PackVersion != "1.6.0" {
+		PackVersion != "1.7.0" {
 		t.Fatalf("Thrift operation binding identity = %q / %q", ThriftOperationBinding, PackVersion)
 	}
 	const (

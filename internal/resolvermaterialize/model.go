@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PackVersion = "1.6.0"
+	PackVersion = "1.7.0"
 
 	GoModulePackName            = "go-module"
 	GRPCGeneratedPackName       = "grpc-generated-attribution"
@@ -251,6 +251,9 @@ type MaterializationPolicy struct {
 	ThriftOperationBinding                string `json:"thrift_operation_binding"`
 	ThriftRWProvenance                    string `json:"thriftrw_provenance"`
 	MaxThriftRWClients                    int    `json:"max_thriftrw_clients"`
+	ProtoDescriptorProvenance             string `json:"proto_descriptor_provenance"`
+	MaxProtoDescriptorCandidates          int    `json:"max_proto_descriptor_candidates"`
+	MaxProtoDescriptorBytes               int    `json:"max_proto_descriptor_bytes"`
 	PackageStructRule                     string `json:"package_struct_rule"`
 	PackageStructRecordSchema             string `json:"package_struct_record_schema"`
 	MaxPackageStructSources               int    `json:"max_package_struct_sources"`
@@ -301,6 +304,9 @@ func FrozenMaterializationPolicy() MaterializationPolicy {
 		ThriftOperationBinding:                ThriftOperationBinding,
 		ThriftRWProvenance:                    ThriftRWProvenance,
 		MaxThriftRWClients:                    MaxThriftRWClients,
+		ProtoDescriptorProvenance:             ProtoDescriptorProvenance,
+		MaxProtoDescriptorCandidates:          MaxProtoDescriptorCandidates,
+		MaxProtoDescriptorBytes:               MaxProtoDescriptorBytes,
 		PackageStructRule:                     PackageStructRule,
 		PackageStructRecordSchema:             PackageStructRecordSchema,
 		MaxPackageStructSources:               MaxPackageStructSources,

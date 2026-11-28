@@ -1,0 +1,47 @@
+{
+  "schema": "phebs-extractor-pack-manifest-v1",
+  "pack_id": "phebs.contract.impact.operation",
+  "pack_claim_version": "1.1.0",
+  "distribution": "default-on-package",
+  "owner": "Ben Meddeb",
+  "ticket": "T47.5, PHEBS-49",
+  "qualification": "bounded-integration-tests",
+  "recipe": {
+    "registry": "cmd/phebs packRecipes",
+    "extractors": [
+      "proto-contract@4.0.0",
+      "grpc-caller@1.6.0-released.1"
+    ],
+    "caller_algorithm": "grpc-caller@1.6.0",
+    "resolver_catalog": "resolver pack 1.7.0, proto_descriptor_provenance protoc-gen-go-embedded-descriptor-equal-v1"
+  },
+  "admission": "Admitted only through a verified signed selection beside the released gRPC Caller Map claim 1.1.0, whose evidence it serves.",
+  "surfaces": {
+    "capability": "contract-impact-operation",
+    "ui": "/impact?shape=operation_callers (reached from a protobuf operation in Contract Atlas or Caller Map)",
+    "mcp_tools": [
+      "build_operation_impact_report"
+    ],
+    "http": "Existing authenticated /api/operation_impact_report"
+  },
+  "required_inputs": [
+    "the released gRPC Caller Map (phebs.grpc.caller.go claim 1.1.0) and its inputs"
+  ],
+  "supported_generators": [
+    "protoc-gen-go-grpc with protoc-gen-go (Go)",
+    "legacy protoc-gen-go plugins=grpc (Go)"
+  ],
+  "excluded": [
+    "generated code whose .proto is not committed",
+    "generated code built from a .proto that has since changed",
+    "several equivalent committed copies of the same .proto",
+    "YARPC, Connect and other non-gRPC protobuf clients",
+    "gRPC calls through struct fields declared in another file",
+    "name-matching consumer evidence (T58 NO-GO)",
+    "independent extraction accuracy",
+    "logical-service completeness",
+    "runtime use and retirement safety"
+  ],
+  "limits": "Existing serving bounds; no bound widened; no new measured capacity or SLO.",
+  "expiry": "2027-01-16T23:59:59Z"
+}

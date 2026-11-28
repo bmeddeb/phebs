@@ -181,7 +181,12 @@ var releasedClaims = map[string]string{
 		"+buf-" + compat.Version + "-" + compat.Policy, // PHEBS-41
 }
 
-const callerComparisonPackID = "phebs.grpc.caller.comparison"
+// callerComparisonPackID is the protobuf caller comparison. Claim 1.1.0
+// (PHEBS-49) inherits the Caller Map's embedded-descriptor attribution.
+const (
+	callerComparisonPackID       = "phebs.grpc.caller.comparison"
+	callerComparisonClaimVersion = "1.1.0"
+)
 
 // thriftCallerComparisonPackID is the PHEBS-44 claim: caller comparison for
 // Thrift-to-Thrift endpoint pairs, admitted only beside the released Thrift
@@ -192,7 +197,7 @@ const (
 	thriftCallerComparisonClaimVersion = "1.3.0"
 )
 const operationImpactPackID = "phebs.contract.impact.operation"
-const operationImpactClaimVersion = "1.0.0"
+const operationImpactClaimVersion = "1.1.0" // PHEBS-49
 
 // thriftOperationImpactPackID is the PHEBS-45 claim: the operation Impact
 // report for exact Thrift endpoints, admitted only beside the released Thrift
@@ -378,6 +383,18 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 				return nil, nil, fmt.Errorf("unsupported Thrift caller comparison claim version %q", record.PackClaimVersion)
 			}
 		}
+		if packID == callerMapPackID {
+			record, _ := selection.Released(packID)
+			if record.PackClaimVersion != callerMapClaimVersion {
+				return nil, nil, fmt.Errorf("unsupported Caller Map claim version %q", record.PackClaimVersion)
+			}
+		}
+		if packID == callerComparisonPackID {
+			record, _ := selection.Released(packID)
+			if record.PackClaimVersion != callerComparisonClaimVersion {
+				return nil, nil, fmt.Errorf("unsupported caller comparison claim version %q", record.PackClaimVersion)
+			}
+		}
 		if packID == thriftCallerMapPackID {
 			record, _ := selection.Released(packID)
 			if record.PackClaimVersion != thriftCallerMapClaimVersion {
@@ -526,7 +543,14 @@ func mergeExtractors(dark, released []extract.Extractor) []extract.Extractor {
 // Go gRPC callers"), grpc-caller 1.6.0, schema t20-caller-v1. T47.5 signs the
 // released record against this identity. The released recipe has a distinct
 // admission version so experimental caller generations cannot be reused.
-const callerMapPackID = "phebs.grpc.caller.go"
+//
+// Claim 1.1.0 (PHEBS-49) also relates protoc-gen-go-grpc clients to their
+// committed .proto through the resolver catalog's embedded-descriptor rule
+// (resolver pack 1.7.0); the extractor recipe is unchanged.
+const (
+	callerMapPackID       = "phebs.grpc.caller.go"
+	callerMapClaimVersion = "1.1.0"
+)
 
 // callerMapRecipe is the fixed in-tree extractor set implementing the T47.2a
 // frozen Go/gRPC-Protobuf recipe. The declaration extractor travels with the

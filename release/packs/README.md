@@ -26,7 +26,9 @@ against the in-tree trust anchor.
   `thrift-caller-map-*`, `thrift-caller-comparison-*` and
   `thrift-operation-impact-*-1.2.0` artifacts PHEBS-47 added on 2026-11-27, and the nine
   `thrift-caller-map-*`, `thrift-caller-comparison-*` and
-  `thrift-operation-impact-*-1.3.0` artifacts PHEBS-48 added on 2026-11-27. The records bind their
+  `thrift-operation-impact-*-1.3.0` artifacts PHEBS-48 added on 2026-11-27, and the nine
+  `caller-map-*`, `caller-comparison-*` and `operation-impact-*-1.1.0` artifacts
+  PHEBS-49 added on 2026-11-28 (the 1.0.0 artifacts keep their bytes). The records bind their
   digests and the complete census, so never edit, add or remove a file
   without re-qualifying the affected pack.
 - `templates/` holds one `PackRelease` template per pack, derived from the

@@ -89,7 +89,7 @@ func callOperations(calls []scannedCall) []string {
 // a resolver compiled from the same descriptors without the projection (the
 // pre-PHEBS-48 behavior) finds none of them.
 func TestPackageStructFieldsResolveCrossFileCallers(t *testing.T) {
-	if PackVersion != "1.6.0" || PackageStructRule != "package-struct-fields-v1" ||
+	if PackVersion != "1.7.0" || PackageStructRule != "package-struct-fields-v1" ||
 		FrozenMaterializationPolicy().PackageStructRule != PackageStructRule ||
 		FrozenMaterializationPolicy().MaxPackageStructFields != MaxPackageStructFields {
 		t.Fatalf("package struct identity = %q / %q", PackageStructRule, PackVersion)

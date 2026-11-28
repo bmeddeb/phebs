@@ -1,0 +1,50 @@
+{
+  "schema": "phebs-extractor-pack-manifest-v1",
+  "pack_id": "phebs.grpc.caller.go",
+  "pack_claim_version": "1.1.0",
+  "distribution": "default-on-package",
+  "owner": "Ben Meddeb",
+  "ticket": "T47.5, PHEBS-49",
+  "qualification": "bounded-integration-tests",
+  "recipe": {
+    "registry": "cmd/phebs packRecipes",
+    "extractors": [
+      "proto-contract@4.0.0",
+      "grpc-caller@1.6.0-released.1"
+    ],
+    "caller_algorithm": "grpc-caller@1.6.0",
+    "resolver_catalog": "resolver pack 1.7.0, proto_descriptor_provenance protoc-gen-go-embedded-descriptor-equal-v1"
+  },
+  "admission": "The released gRPC caller version is admitted only through a verified signed selection; candidate and caller identity fences refuse experimental generations.",
+  "surfaces": {
+    "capability": "contract-caller-map",
+    "ui": "/contracts (Caller Map for protobuf operations)",
+    "mcp_tools": [
+      "list_operation_callers",
+      "read_operation_caller_citation"
+    ],
+    "http": "Existing authenticated exact Caller Map, progress and citation routes"
+  },
+  "required_inputs": [
+    "either a repository-root generated-from-snapshot.json (t20-generated-from-v1) mapping the generated client file to its declaration",
+    "or protoc-gen-go output beside the protoc-gen-go-grpc client whose embedded descriptor equals exactly one committed .proto at its source path",
+    "the .proto declaration and the generated Go client committed at the same revision"
+  ],
+  "supported_generators": [
+    "protoc-gen-go-grpc with protoc-gen-go (Go)",
+    "legacy protoc-gen-go plugins=grpc (Go)"
+  ],
+  "excluded": [
+    "generated code whose .proto is not committed",
+    "generated code built from a .proto that has since changed",
+    "several equivalent committed copies of the same .proto",
+    "YARPC, Connect and other non-gRPC protobuf clients",
+    "gRPC calls through struct fields declared in another file",
+    "name-matching consumer evidence (T58 NO-GO)",
+    "independent extraction accuracy",
+    "logical-service completeness",
+    "runtime use and retirement safety"
+  ],
+  "limits": "At most 4,096 *.pb.go candidates per catalog within the existing generated-source and input blob bounds; decoded descriptors at most 4 MiB; all other bounds unchanged; no new measured capacity or SLO.",
+  "expiry": "2027-01-15T23:59:59Z"
+}

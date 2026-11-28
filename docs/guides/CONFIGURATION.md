@@ -1705,6 +1705,21 @@ citation reads the Go string literal's own bytes. The Thrift Caller Map
 (claim 1.2.0) binds thriftrw/YARPC callers to these declarations through the
 same hash-verified provenance as committed files.
 
+### gRPC callers through the embedded protobuf descriptor (PHEBS-49)
+
+gRPC Caller Map claim 1.1.0 (with the protobuf caller comparison and
+operation Impact claims at 1.1.0) no longer needs an authored
+`generated-from-snapshot.json` for protoc-gen-go-grpc clients. A client file
+no snapshot mapping or invocation root governs is related to a committed
+`.proto` when the protoc-gen-go descriptor in its directory, named by the
+client's `// source:` path, is equivalent to exactly one declared `.proto` at
+that path or ending in it. Equivalent means the same package, syntax, imports,
+`go_package`, messages, enums and services. The resolver catalog (pack 1.7.0)
+decides this once per catalog build. Generated code built from a `.proto` that
+has since changed, several equivalent committed copies, and generated code
+whose `.proto` is not committed stay explicit abstentions. A snapshot mapping
+still governs any file it names. No configuration is involved.
+
 ### Thrift callers through struct fields declared in another file (PHEBS-48)
 
 Thrift Caller Map claim 1.3.0 (with the comparison and operation Impact claims

@@ -17,8 +17,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/packrelease"
 )
 
-// TestCallerMapReleaseArtifactsSignAndLoad uses the proposed release artifacts
-// with an ephemeral test key. Binary facts are synthetic because go test has no
+// TestCallerMapReleaseArtifactsSignAndLoad uses the shipped claim 1.1.0
+// release artifacts and template (PHEBS-49) with an ephemeral test key. Binary facts are synthetic because go test has no
 // source revision; artifact census, signing, loader and API/MCP assembly are real.
 func TestCallerMapReleaseArtifactsSignAndLoad(t *testing.T) {
 	tmp := t.TempDir()
@@ -29,8 +29,8 @@ func TestCallerMapReleaseArtifactsSignAndLoad(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, name := range []string{"caller-map-card-1.0.0.md", "caller-map-manifest-1.0.0.json", "caller-map-validation-1.0.0.json"} {
-		raw, err := os.ReadFile(filepath.Join("../../spike/t475/release/artifacts", name))
+	for _, name := range []string{"caller-map-card-1.1.0.md", "caller-map-manifest-1.1.0.json", "caller-map-validation-1.1.0.json"} {
+		raw, err := os.ReadFile(filepath.Join("../../release/packs/artifacts", name))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -54,7 +54,7 @@ func TestCallerMapReleaseArtifactsSignAndLoad(t *testing.T) {
 		executable: writeReleaseExecutable(t, tmp, "fixture-phebs", "integration-binary", 0o700),
 		goVersion:  "go1.26.5", sourceCommit: strings.Repeat("a", 40),
 	}
-	rawTemplate, err := os.ReadFile("../../spike/t475/release/receipts/template.json")
+	rawTemplate, err := os.ReadFile("../../release/packs/templates/caller-map.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestCallerMapReleaseArtifactsSignAndLoad(t *testing.T) {
 	}
 	// The startup census must detect artifact movement after signing, rather
 	// than accepting the record's own assertions about its referenced bytes.
-	if err := os.WriteFile(filepath.Join(artifacts, "caller-map-card-1.0.0.md"), []byte("changed claim"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(artifacts, "caller-map-card-1.1.0.md"), []byte("changed claim"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := releasedExtractors(t.Context(), cfg); err == nil {
