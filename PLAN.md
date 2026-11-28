@@ -20019,3 +20019,76 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       2,298 files and 44 MB read, 13 fully parsed and 9 rows for cadence-scip.
     - Receipts are in `~/phebs-instance/receipts/phebs48-2026-11-27/` on
       `dave`.
+
+- **2026-11-28 — PHEBS-49: gRPC Caller Map binds protoc-gen-go output to its committed `.proto` by embedded descriptor equality (Ben chose option A).**
+  Goal: give real repositories' gRPC operations their callers. On `v0.3.15`
+  the gRPC Caller Map, its comparison and gRPC operation Impact had no rows
+  on any real repository. Each catalog's `grpc-generated-attribution` member
+  recorded `generated_snapshot_missing`, because generated gRPC Go was
+  related to a declaration only through an authored
+  `generated-from-snapshot.json`, which only the t2114 and t307 fixtures
+  commit. Options were (A) relate protoc-gen-go output through the
+  `FileDescriptorProto` it embeds, binding only on equality with exactly one
+  committed `.proto`, (B) bind on the `// source:` header alone, and (C)
+  leave as is.
+  - **Rule (`protoc-gen-go-embedded-descriptor-equal-v1`).** While
+    materializing the gRPC member, phebs reads every base-lane `*.pb.go` in
+    the `grpc-caller` view that no snapshot mapping or invocation root
+    governs. A file whose gRPC client syntax yields symbols is a client
+    file; each symbol carries its `// source:` path S. In the client file's
+    directory, the protoc-gen-go descriptor literals (`file_*_rawDesc`, or
+    the legacy gzipped `fileDescriptor_*`) are decoded, bounded, into
+    `FileDescriptorProto`s. Exactly one descriptor named S, in the same
+    package clause, must exist, and it must declare every operation the
+    client file calls. Every declared `.proto` at S or ending in `/S` is
+    parsed without linking. The binding needs exactly one of them to be
+    equivalent to the descriptor: same package, syntax or edition, imports,
+    `go_package`, messages (recursively: fields by name, number, label,
+    proto3 `optional`, scalar type or lexically resolved type name; oneofs;
+    nested enums), enums, and services with method names, input and output
+    types and streaming flags. A type name written in the `.proto` must
+    resolve to the descriptor's fully qualified name by protobuf scoping,
+    and when a closer scope names a type declared in the same file, it must
+    be that one. The declaration must have one lineage. Every other shape is
+    an explicit abstention row, with no inference from names or directories.
+  - **Records.** One `proto_descriptor_provenance` row per client file and
+    source (state, reason, descriptor file, digest, candidates), then the
+    client's `generated_symbol` rows. Only resolved rows carry the
+    declaration lineage; abstaining rows keep their symbols so that calls
+    through them become explicit abstentions. An explicit snapshot mapping
+    for the same file still governs it.
+  - **Bounds.** At most 4,096 `*.pb.go` candidates per catalog, each at
+    most the existing 4 MiB generated-source bound, through the existing
+    input blob budget. A decoded descriptor is at most 4 MiB. Declared
+    `.proto` files pass the existing protobuf preflight before parsing. Over
+    the candidate bound, one unsupported row is written and nothing is bound.
+  - **Versions.** Resolver pack 1.7.0 adds the rule to the frozen policy.
+    The gRPC Caller Map, gRPC caller comparison and gRPC operation Impact
+    claims move to 1.1.0 with new cards, manifests and validation; the 1.0.0
+    artifacts keep their bytes. The Thrift lane is unchanged.
+  - **Expected effect (measured before implementing).** Decoding every
+    committed descriptor in the mirrored repositories:
+    - grpc-go: 6 services bind (examples echo, helloworld and route_guide;
+      interop/stress metrics; profiling; reflection/grpc_testing), each with
+      a gRPC client beside it. 12 have no committed `.proto` because they
+      are vendored from grpc-proto.
+    - cadence: history/v1 and matching/v1 bind, but cadence calls them
+      through YARPC, not gRPC clients, so no gRPC caller rows are expected.
+    - microservices-demo: 0 of 4. Its genproto embeds
+      `go_package = …/miscroservices-demo/hipstershop`. No committed `.proto`
+      says that: the generated code predates the current `protos/demo.proto`.
+      Without `go_package`, the root and the three per-service copies are
+      structurally identical, so there would be four matches. The option text
+      in Kite expected a match there; that was wrong, and is corrected in
+      PHEBS-49.
+  - **Not established.** No precision, recall, completeness or scale claim.
+    No binding for generated code whose `.proto` is not committed (a
+    PHEBS-47-style declaration from the embedded descriptor would be a
+    separate decision), for stale generated code, for YARPC or Connect
+    clients, or for gRPC calls through struct fields declared in another
+    file.
+  - **Steady-state cost.** At catalog build only: one blob read per
+    base-lane `*.pb.go`, a syntax parse of client files and of descriptor
+    files in client directories, and one parse per declared `.proto` named
+    by a client's source path. Nothing per query or sync tick; caller leaves
+    already key on the catalog manifest digest.
